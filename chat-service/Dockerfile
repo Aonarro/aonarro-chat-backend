@@ -8,6 +8,4 @@ RUN yarn install --frozen-lockfile
 
 COPY . .
 
-EXPOSE 8002
-
 CMD ["yarn", "start:dev"]
