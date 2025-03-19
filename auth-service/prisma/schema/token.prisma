@@ -1,0 +1,18 @@
+model Token {
+  id String @id @default(uuid())
+
+  email     String
+  token     String    @unique
+  type      TokenType
+  expiresIn DateTime
+
+  createdAt DateTime @default(now())
+
+  @@map("tokens")
+}
+
+enum TokenType {
+  VERIFICATION
+  TWO_FACTOR
+  PASSWORD_RESET
+}

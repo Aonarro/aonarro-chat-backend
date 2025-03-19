@@ -10,4 +10,3 @@ COPY . .
 
 EXPOSE 8002
 
-CMD ["yarn", "start:dev"]

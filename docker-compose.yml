@@ -7,10 +7,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - '${AUTH_PORT}:8001'
+    environment:
+      POSTGRES_URI: ${POSTGRES_URI}
     env_file:
       - .env
     volumes:
-      - ./auth-service:/usr/src/app
+      - ./auth-service/src:/usr/src/app/src
     command: yarn start:dev
     depends_on:
       postgres:
@@ -32,7 +34,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./user-service:/usr/src/app
+      - ./user-service/src:/usr/src/app/src
     command: yarn start:dev
     depends_on:
       postgres:
@@ -45,45 +47,45 @@ services:
       - chat_network
     restart: unless-stopped
 
-  chat-service:
-    build:
-      context: ./chat-service
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    volumes:
-      - ./chat-service:/usr/src/app
-    command: yarn start:dev
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - chat_network
-    restart: unless-stopped
+  # chat-service:
+  #   build:
+  #     context: ./chat-service
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ./chat-service:/usr/src/app
+  #   command: yarn start:dev
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     rabbitmq:
+  #       condition: service_healthy
+  #   networks:
+  #     - chat_network
+  #   restart: unless-stopped
 
-  file-service:
-    build:
-      context: ./file-service
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    volumes:
-      - ./file-service:/usr/src/app
-    command: yarn start:dev
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - chat_network
-    restart: unless-stopped
+  # file-service:
+  #   build:
+  #     context: ./file-service
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ./file-service:/usr/src/app
+  #   command: yarn start:dev
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     rabbitmq:
+  #       condition: service_healthy
+  #   networks:
+  #     - chat_network
+  #   restart: unless-stopped
 
   notification-service:
     build:
@@ -92,7 +94,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./notification-service:/usr/src/app
+      - ./notification-service/src:/usr/src/app/src
     command: yarn start:dev
     depends_on:
       postgres:

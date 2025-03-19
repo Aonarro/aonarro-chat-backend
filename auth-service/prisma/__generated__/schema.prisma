@@ -1,0 +1,60 @@
+model Profile {
+  id        Int      @id @default(autoincrement())
+  userId    String   @unique
+  firstName String?
+  lastName  String?
+  avatarUrl String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../__generated__"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URI")
+}
+
+model Token {
+  id String @id @default(uuid())
+
+  email     String
+  token     String    @unique
+  type      TokenType
+  expiresIn DateTime
+
+  createdAt DateTime @default(now())
+
+  @@map("tokens")
+}
+
+enum TokenType {
+  VERIFICATION
+  TWO_FACTOR
+  PASSWORD_RESET
+}
+
+model User {
+  id String @id @default(uuid())
+
+  email    String @unique
+  password String
+
+  isVerified Boolean @default(false)
+
+  profile Profile?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+
+  @@map("users")
+}
