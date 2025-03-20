@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma/prisma.service';
 import { TokenType } from '../../../prisma/__generated__';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class TokenService {
@@ -46,5 +47,26 @@ export class TokenService {
     await this.prisma.token.delete({ where: { id: tokenRecord.id } });
 
     return true;
+  }
+
+  async findTokenByEmail(email: string) {
+    const existingToken = this.prisma.token.findFirst({
+      where: {
+        email,
+        expiresIn: { gte: new Date() },
+      },
+    });
+
+    return existingToken;
+  }
+
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async removeExpiredTokens() {
+    await this.prisma.token.deleteMany({
+      where: {
+        expiresIn: { lte: new Date() },
+      },
+    });
+    console.log('🗑️ Удалены просроченные токены');
   }
 }

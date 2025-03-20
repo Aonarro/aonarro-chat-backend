@@ -9,13 +9,13 @@ import {
   Get,
   Res,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from '../../auth/dto/register.dto';
+import { LoginDto } from '../../auth/dto/login.dto';
 import { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { SessionAuthGuard } from '../../utils/guards/session-auth.guard';
 import { IUser } from '../../utils/types/types';
+import { AuthService } from '../services/auth.service';
 
 @Controller()
 export class AuthController {

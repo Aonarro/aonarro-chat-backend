@@ -7,14 +7,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma/prisma.service';
-import { RegisterDto } from './dto/register.dto';
+import { RegisterDto } from '../../auth/dto/register.dto';
 import { TokenType, User } from '../../../prisma/__generated__';
 import * as argon2 from 'argon2';
-import { TokenService } from '../token/token.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { Request, Response } from 'express';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto } from '../../auth/dto/login.dto';
 import { ConfigService } from '@nestjs/config';
+import { TokenService } from './token.service';
 
 @Injectable()
 export class AuthService {
@@ -71,6 +71,16 @@ export class AuthService {
     }
 
     if (!user.isVerified) {
+      const existingToken = await this.tokenService.findTokenByEmail(
+        user.email,
+      );
+
+      if (existingToken) {
+        throw new UnauthorizedException(
+          'Please check your inbox (including the "Spam" folder). If you haven’t received the email, try requesting the code again in a few minutes.',
+        );
+      }
+
       const token = await this.tokenService.generateToken(
         loginDto.email,
         TokenType.VERIFICATION,

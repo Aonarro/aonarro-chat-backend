@@ -1,19 +1,17 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma/prisma.service';
-import { ConfirmationDto } from './dto/confirmation.dto';
+import { ConfirmationDto } from '../dto/confirmation.dto';
 import { TokenType } from '../../../prisma/__generated__';
-import { AuthService } from '../auth/auth.service';
 import { Request } from 'express';
+import { AuthService } from './auth.service';
+import { TokenService } from './token.service';
 
 @Injectable()
 export class EmailConfirmationService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly authService: AuthService,
+    private readonly tokenService: TokenService,
   ) {}
 
   public async newVerification(req: Request, confirmationDto: ConfirmationDto) {
@@ -28,11 +26,11 @@ export class EmailConfirmationService {
       throw new NotFoundException('Verification token not found');
     }
 
-    const isExpired = new Date(existingToken.expiresIn) < new Date();
-
-    if (isExpired) {
-      throw new BadRequestException('Verification token is expired');
-    }
+    await this.tokenService.verifyToken(
+      existingToken.email,
+      confirmationDto.token,
+      TokenType.VERIFICATION,
+    );
 
     const existingUser = await this.authService.getUserDataByEmail(
       existingToken.email,
@@ -48,13 +46,6 @@ export class EmailConfirmationService {
       },
       data: {
         isVerified: true,
-      },
-    });
-
-    await this.prismaService.token.delete({
-      where: {
-        id: existingToken.id,
-        type: TokenType.VERIFICATION,
       },
     });
 

@@ -1,21 +1,27 @@
-import IORedis from 'ioredis';
-import { Logger, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthModule } from './modules/auth/auth.module';
-import { PrismaModule } from './config/prisma/prisma.module';
+import { PassportModule } from '@nestjs/passport';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { EmailConfirmationModule } from './modules/email-confirmation/email-confirmation.module';
 import * as cookieParser from 'cookie-parser';
 import * as session from 'express-session';
 import * as passport from 'passport';
 import { RedisStore } from 'connect-redis';
-import { PassportModule } from '@nestjs/passport';
+import IORedis from 'ioredis';
+import { Logger } from '@nestjs/common';
+import { PrismaModule } from '../config/prisma/prisma.module';
+import { RabbitMQModule } from '../config/rabbitmq/rabbitmq.module';
+import { AuthController } from './controllers/auth.controller';
+import { AuthService } from './services/auth.service';
+import { LocalStrategy } from './strategies/local.strategy';
+import { SessionSerializer } from './services/session.serializer';
+import { EmailConfirmationController } from './controllers/email-confirmation.controller';
+import { EmailConfirmationService } from './services/email-confirmation.service';
+import { TokenService } from './services/token.service';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     ClientsModule.register([
       {
         name: 'NOTIFICATION_SERVICE',
@@ -27,13 +33,22 @@ import { PassportModule } from '@nestjs/passport';
       },
     ]),
     PrismaModule,
-    AuthModule,
-    EmailConfirmationModule,
+    RabbitMQModule,
     PassportModule.register({ session: true }),
+    ScheduleModule.forRoot(),
+  ],
+  controllers: [AuthController, EmailConfirmationController],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    SessionSerializer,
+    EmailConfirmationService,
+    TokenService,
   ],
 })
-export class AppModule implements NestModule {
+export class AuthModule implements NestModule {
   constructor(private readonly configService: ConfigService) {}
+
   configure(consumer: MiddlewareConsumer) {
     const redisUrl = this.configService.get<string>('REDIS_URI');
     const sessionSecret = this.configService.get<string>('SESSION_SECRET');
@@ -47,31 +62,14 @@ export class AppModule implements NestModule {
     const sessionHTTP_ONLY =
       this.configService.get<string>('SESSION_HTTP_ONLY') === 'true';
 
-    console.log(
-      'Redis URL:',
-      redisUrl,
-      'Session Secret:',
-      sessionSecret,
-      ' Session Max Age:',
-      sessionMaxAge,
-      'Session Secure:',
-      sessionSecure,
-      'Session Prefix:',
-      sessionPrefix,
-      'Session Name:',
-      sessionName,
-      'Session HTTP Only:',
-      sessionHTTP_ONLY,
-    );
-
     const redisClient = new IORedis(redisUrl);
-
     redisClient.on('connect', () => {
       Logger.log('🔌 Подключение к Redis установлено');
     });
     redisClient.on('error', (err) => {
       Logger.error('❌ Ошибка подключения к Redis:', err);
     });
+
     consumer
       .apply(
         cookieParser(),

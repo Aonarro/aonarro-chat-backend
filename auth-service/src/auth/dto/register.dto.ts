@@ -5,7 +5,7 @@ import {
   MinLength,
   Validate,
 } from 'class-validator';
-import { IsPasswordMatchConstraint } from '../../../utils/decorators/isPasswordMatch.decorator';
+import { IsPasswordMatchConstraint } from '../../utils/decorators/isPasswordMatch.decorator';
 
 export class RegisterDto {
   @IsString({ message: 'Email must be a text value' })
