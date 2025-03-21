@@ -11,6 +11,7 @@ services:
       - .env
     volumes:
       - ./auth-service/src:/usr/src/app/src
+      - ./auth-service/prisma:/usr/src/app/prisma
     command: yarn start:dev
     depends_on:
       postgres:
@@ -33,6 +34,7 @@ services:
       - .env
     volumes:
       - ./user-service/src:/usr/src/app/src
+      - ./user-service/prisma:/usr/src/app/prisma
     command: yarn start:dev
     depends_on:
       postgres:

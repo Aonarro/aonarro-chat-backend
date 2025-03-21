@@ -8,13 +8,13 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma/prisma.service';
 import { RegisterDto } from '../../auth/dto/register.dto';
-import { TokenType, User } from '../../../prisma/__generated__';
 import * as argon2 from 'argon2';
 import { ClientProxy } from '@nestjs/microservices';
 import { Request, Response } from 'express';
 import { LoginDto } from '../../auth/dto/login.dto';
 import { ConfigService } from '@nestjs/config';
 import { TokenService } from './token.service';
+import { TokenType, User } from '../../../prisma/__generated__';
 
 @Injectable()
 export class AuthService {
