@@ -892,6 +892,7 @@ export namespace Prisma {
   export type ProfileMinAggregateOutputType = {
     id: number | null
     userId: string | null
+    username: string | null
     firstName: string | null
     lastName: string | null
     avatarUrl: string | null
@@ -903,6 +904,7 @@ export namespace Prisma {
   export type ProfileMaxAggregateOutputType = {
     id: number | null
     userId: string | null
+    username: string | null
     firstName: string | null
     lastName: string | null
     avatarUrl: string | null
@@ -914,6 +916,7 @@ export namespace Prisma {
   export type ProfileCountAggregateOutputType = {
     id: number
     userId: number
+    username: number
     firstName: number
     lastName: number
     avatarUrl: number
@@ -935,6 +938,7 @@ export namespace Prisma {
   export type ProfileMinAggregateInputType = {
     id?: true
     userId?: true
+    username?: true
     firstName?: true
     lastName?: true
     avatarUrl?: true
@@ -946,6 +950,7 @@ export namespace Prisma {
   export type ProfileMaxAggregateInputType = {
     id?: true
     userId?: true
+    username?: true
     firstName?: true
     lastName?: true
     avatarUrl?: true
@@ -957,6 +962,7 @@ export namespace Prisma {
   export type ProfileCountAggregateInputType = {
     id?: true
     userId?: true
+    username?: true
     firstName?: true
     lastName?: true
     avatarUrl?: true
@@ -1055,6 +1061,7 @@ export namespace Prisma {
   export type ProfileGroupByOutputType = {
     id: number
     userId: string
+    username: string
     firstName: string | null
     lastName: string | null
     avatarUrl: string | null
@@ -1085,6 +1092,7 @@ export namespace Prisma {
   export type ProfileSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     userId?: boolean
+    username?: boolean
     firstName?: boolean
     lastName?: boolean
     avatarUrl?: boolean
@@ -1096,6 +1104,7 @@ export namespace Prisma {
   export type ProfileSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     userId?: boolean
+    username?: boolean
     firstName?: boolean
     lastName?: boolean
     avatarUrl?: boolean
@@ -1107,6 +1116,7 @@ export namespace Prisma {
   export type ProfileSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     userId?: boolean
+    username?: boolean
     firstName?: boolean
     lastName?: boolean
     avatarUrl?: boolean
@@ -1118,6 +1128,7 @@ export namespace Prisma {
   export type ProfileSelectScalar = {
     id?: boolean
     userId?: boolean
+    username?: boolean
     firstName?: boolean
     lastName?: boolean
     avatarUrl?: boolean
@@ -1126,7 +1137,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type ProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "firstName" | "lastName" | "avatarUrl" | "bio" | "createdAt" | "updatedAt", ExtArgs["result"]["profile"]>
+  export type ProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "username" | "firstName" | "lastName" | "avatarUrl" | "bio" | "createdAt" | "updatedAt", ExtArgs["result"]["profile"]>
 
   export type $ProfilePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Profile"
@@ -1134,6 +1145,7 @@ export namespace Prisma {
     scalars: $Extensions.GetPayloadResult<{
       id: number
       userId: string
+      username: string
       firstName: string | null
       lastName: string | null
       avatarUrl: string | null
@@ -1565,6 +1577,7 @@ export namespace Prisma {
   interface ProfileFieldRefs {
     readonly id: FieldRef<"Profile", 'Int'>
     readonly userId: FieldRef<"Profile", 'String'>
+    readonly username: FieldRef<"Profile", 'String'>
     readonly firstName: FieldRef<"Profile", 'String'>
     readonly lastName: FieldRef<"Profile", 'String'>
     readonly avatarUrl: FieldRef<"Profile", 'String'>
@@ -1954,6 +1967,7 @@ export namespace Prisma {
   export const ProfileScalarFieldEnum: {
     id: 'id',
     userId: 'userId',
+    username: 'username',
     firstName: 'firstName',
     lastName: 'lastName',
     avatarUrl: 'avatarUrl',
@@ -2059,6 +2073,7 @@ export namespace Prisma {
     NOT?: ProfileWhereInput | ProfileWhereInput[]
     id?: IntFilter<"Profile"> | number
     userId?: StringFilter<"Profile"> | string
+    username?: StringFilter<"Profile"> | string
     firstName?: StringNullableFilter<"Profile"> | string | null
     lastName?: StringNullableFilter<"Profile"> | string | null
     avatarUrl?: StringNullableFilter<"Profile"> | string | null
@@ -2070,6 +2085,7 @@ export namespace Prisma {
   export type ProfileOrderByWithRelationInput = {
     id?: SortOrder
     userId?: SortOrder
+    username?: SortOrder
     firstName?: SortOrderInput | SortOrder
     lastName?: SortOrderInput | SortOrder
     avatarUrl?: SortOrderInput | SortOrder
@@ -2081,6 +2097,7 @@ export namespace Prisma {
   export type ProfileWhereUniqueInput = Prisma.AtLeast<{
     id?: number
     userId?: string
+    username?: string
     AND?: ProfileWhereInput | ProfileWhereInput[]
     OR?: ProfileWhereInput[]
     NOT?: ProfileWhereInput | ProfileWhereInput[]
@@ -2090,11 +2107,12 @@ export namespace Prisma {
     bio?: StringNullableFilter<"Profile"> | string | null
     createdAt?: DateTimeFilter<"Profile"> | Date | string
     updatedAt?: DateTimeFilter<"Profile"> | Date | string
-  }, "id" | "userId">
+  }, "id" | "userId" | "username">
 
   export type ProfileOrderByWithAggregationInput = {
     id?: SortOrder
     userId?: SortOrder
+    username?: SortOrder
     firstName?: SortOrderInput | SortOrder
     lastName?: SortOrderInput | SortOrder
     avatarUrl?: SortOrderInput | SortOrder
@@ -2114,6 +2132,7 @@ export namespace Prisma {
     NOT?: ProfileScalarWhereWithAggregatesInput | ProfileScalarWhereWithAggregatesInput[]
     id?: IntWithAggregatesFilter<"Profile"> | number
     userId?: StringWithAggregatesFilter<"Profile"> | string
+    username?: StringWithAggregatesFilter<"Profile"> | string
     firstName?: StringNullableWithAggregatesFilter<"Profile"> | string | null
     lastName?: StringNullableWithAggregatesFilter<"Profile"> | string | null
     avatarUrl?: StringNullableWithAggregatesFilter<"Profile"> | string | null
@@ -2124,6 +2143,7 @@ export namespace Prisma {
 
   export type ProfileCreateInput = {
     userId: string
+    username: string
     firstName?: string | null
     lastName?: string | null
     avatarUrl?: string | null
@@ -2135,6 +2155,7 @@ export namespace Prisma {
   export type ProfileUncheckedCreateInput = {
     id?: number
     userId: string
+    username: string
     firstName?: string | null
     lastName?: string | null
     avatarUrl?: string | null
@@ -2145,6 +2166,7 @@ export namespace Prisma {
 
   export type ProfileUpdateInput = {
     userId?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -2156,6 +2178,7 @@ export namespace Prisma {
   export type ProfileUncheckedUpdateInput = {
     id?: IntFieldUpdateOperationsInput | number
     userId?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -2167,6 +2190,7 @@ export namespace Prisma {
   export type ProfileCreateManyInput = {
     id?: number
     userId: string
+    username: string
     firstName?: string | null
     lastName?: string | null
     avatarUrl?: string | null
@@ -2177,6 +2201,7 @@ export namespace Prisma {
 
   export type ProfileUpdateManyMutationInput = {
     userId?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -2188,6 +2213,7 @@ export namespace Prisma {
   export type ProfileUncheckedUpdateManyInput = {
     id?: IntFieldUpdateOperationsInput | number
     userId?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -2256,6 +2282,7 @@ export namespace Prisma {
   export type ProfileCountOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
+    username?: SortOrder
     firstName?: SortOrder
     lastName?: SortOrder
     avatarUrl?: SortOrder
@@ -2271,6 +2298,7 @@ export namespace Prisma {
   export type ProfileMaxOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
+    username?: SortOrder
     firstName?: SortOrder
     lastName?: SortOrder
     avatarUrl?: SortOrder
@@ -2282,6 +2310,7 @@ export namespace Prisma {
   export type ProfileMinOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
+    username?: SortOrder
     firstName?: SortOrder
     lastName?: SortOrder
     avatarUrl?: SortOrder

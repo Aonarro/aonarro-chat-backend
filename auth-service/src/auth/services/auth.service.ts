@@ -63,7 +63,9 @@ export class AuthService {
   public async login(
     req: Request,
     loginDto: LoginDto,
-  ): Promise<void | { message: string }> {
+  ): Promise<
+    void | { message: string } | { message: string; verifyEmail: boolean }
+  > {
     const user = req.user as User;
 
     if (!user) {
@@ -76,9 +78,11 @@ export class AuthService {
       );
 
       if (existingToken) {
-        throw new UnauthorizedException(
-          'Please check your inbox (including the "Spam" folder). If you haven’t received the email, try requesting the code again in a few minutes.',
-        );
+        return {
+          message:
+            'Please check your inbox (including the "Spam" folder). If you haven’t received the email, try requesting the code again in a few minutes.',
+          verifyEmail: true,
+        };
       }
 
       const token = await this.tokenService.generateToken(
@@ -97,7 +101,11 @@ export class AuthService {
       );
     }
 
-    return await this.authenticateAndSaveSession(req, user);
+    return await this.authenticateAndSaveSession(
+      req,
+      user,
+      'Thank you for coming back! We are glad to see you again.',
+    );
   }
 
   public async logOut(req: Request, res: Response): Promise<void> {
@@ -179,7 +187,7 @@ export class AuthService {
   }
 
   public async getUserDataByEmail(email: string): Promise<User | undefined> {
-    return await this.prismaService.user.findFirst({
+    return this.prismaService.user.findFirst({
       where: {
         email: email,
       },
@@ -189,7 +197,7 @@ export class AuthService {
   public async getUserDataById(
     id: string,
   ): Promise<Omit<User, 'password'> | undefined> {
-    return await this.prismaService.user.findFirst({
+    return this.prismaService.user.findFirst({
       where: {
         id: id,
       },

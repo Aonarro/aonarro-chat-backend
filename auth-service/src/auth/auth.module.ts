@@ -79,10 +79,11 @@ export class AuthModule implements NestModule {
           resave: false,
           saveUninitialized: false,
           cookie: {
-            secure: sessionSecure,
+            secure: false,
             httpOnly: sessionHTTP_ONLY,
             maxAge: sessionMaxAge,
             sameSite: 'lax',
+            domain: 'localhost',
           },
           store: new RedisStore({
             client: redisClient,
