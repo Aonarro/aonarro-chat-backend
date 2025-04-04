@@ -1,7 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
-import { ClientsModule, Transport } from '@nestjs/microservices';
 import * as cookieParser from 'cookie-parser';
 import * as session from 'express-session';
 import * as passport from 'passport';
@@ -22,16 +21,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ClientsModule.register([
-      {
-        name: 'NOTIFICATION_SERVICE',
-        transport: Transport.RMQ,
-        options: {
-          urls: ['amqp://localhost:5672'],
-          queue: 'notifications_queue',
-        },
-      },
-    ]),
     PrismaModule,
     RabbitMQModule,
     PassportModule.register({ session: true }),
@@ -79,7 +68,7 @@ export class AuthModule implements NestModule {
           resave: false,
           saveUninitialized: false,
           cookie: {
-            secure: false,
+            secure: sessionSecure,
             httpOnly: sessionHTTP_ONLY,
             maxAge: sessionMaxAge,
             sameSite: 'lax',

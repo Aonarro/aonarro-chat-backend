@@ -12,6 +12,7 @@ services:
     volumes:
       - ./auth-service/src:/usr/src/app/src
       - ./auth-service/prisma:/usr/src/app/prisma
+      - ./auth-service/logs:/usr/src/app/logs
     command: yarn start:dev
     depends_on:
       postgres:

@@ -11,7 +11,7 @@ datasource db {
 }
 
 model Profile {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid())
   userId    String   @unique
   username  String   @unique
   firstName String?

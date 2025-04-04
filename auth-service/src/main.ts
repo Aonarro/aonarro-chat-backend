@@ -3,9 +3,10 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AuthModule } from './auth/auth.module';
+import { logger } from './config/logger/logger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AuthModule);
+  const app = await NestFactory.create(AuthModule, { logger: logger });
 
   const configService = app.get(ConfigService);
 
@@ -25,6 +26,8 @@ async function bootstrap() {
       queue: 'auth_queue',
     },
   });
+
+  console.log('Goode morning');
 
   const port = configService.getOrThrow('AUTH_PORT');
 

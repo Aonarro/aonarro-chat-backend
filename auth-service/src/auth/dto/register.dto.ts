@@ -8,6 +8,11 @@ import {
 import { IsPasswordMatchConstraint } from '../../utils/decorators/isPasswordMatch.decorator';
 
 export class RegisterDto {
+  @IsString({ message: 'Username must be a text value' })
+  @IsString({ message: 'Please enter a valid username' })
+  @IsNotEmpty({ message: 'Username is required' })
+  username: string;
+
   @IsString({ message: 'Email must be a text value' })
   @IsEmail({}, { message: 'Please enter a valid email address' })
   @IsNotEmpty({ message: 'Email is required' })

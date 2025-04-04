@@ -3,6 +3,8 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
+import { WinstonModule } from 'nest-winston';
+import { winstonLogger } from './config/logger';
 
 async function bootstrap() {
   const appContext = await NestFactory.createApplicationContext(AppModule);
@@ -15,8 +17,10 @@ async function bootstrap() {
         `amqp://${configService.getOrThrow('RABBITMQ_HOST')}:${configService.getOrThrow('RABBITMQ_PORT')}`,
       ],
       queue: 'notifications_queue',
-      queueOptions: { durable: false },
     },
+    logger: WinstonModule.createLogger({
+      transports: winstonLogger,
+    }),
   });
 
   await app.listen();

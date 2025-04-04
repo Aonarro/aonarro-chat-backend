@@ -1,37 +1,34 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
 import { SessionAuthGuard } from '../../utils/guards/session-auth.guard';
-import { ExtendedRequest } from '../../utils/type/types';
+import { RequestWithUserId } from '../../utils/type/types';
 import { ProfileService } from '../services/profile.service';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { CreateProfileDto } from '../dto/create-profile.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 
 @Controller('profile')
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
-  @Post()
-  @UseGuards(SessionAuthGuard)
-  async createProfile(
-    @Req() req: ExtendedRequest,
-    @Body() createProfileDto: CreateProfileDto,
-  ) {
-    const userId = req.userId;
-    return this.profileService.createProfile(userId, createProfileDto);
+  @EventPattern('create_user')
+  async createProfile(@Payload() data: CreateProfileDto) {
+    return this.profileService.createProfile(data.userId, data.username);
   }
 
   @Get()
   @UseGuards(SessionAuthGuard)
-  @HttpCode(HttpStatus.OK)
-  public async newVerification(@Req() req: ExtendedRequest) {
-    console.log('User ID:', req.userId);
-    return;
+  getUserProfile(@Req() req: RequestWithUserId) {
+    const userId = req.userId;
+    return this.profileService.getProfile(userId);
+  }
+
+  @Patch()
+  @UseGuards(SessionAuthGuard)
+  updateUserProfile(
+    @Req() req: RequestWithUserId,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
+    const userId = req.userId;
+    return this.profileService.updateProfile(userId, updateProfileDto);
   }
 }

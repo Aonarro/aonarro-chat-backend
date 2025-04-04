@@ -1,6 +1,12 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { RedisService } from '../../config/redis/redis.service';
 import { ConfigService } from '@nestjs/config';
+import { logger } from '../../config/logger/logger';
 
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
@@ -12,33 +18,39 @@ export class SessionAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
-    const sessionId = request.cookies['session']
-      .split('.')[0]
-      ?.replace(/^s:/, '');
-
-    if (!sessionId) {
-      return false;
+    const sessionCookie = request.cookies['session'];
+    if (!sessionCookie) {
+      throw new UnauthorizedException('Session cookie not found');
     }
 
-    console.log(sessionId);
+    const sessionId = sessionCookie.startsWith('s:')
+      ? sessionCookie.slice(2).split('.')[0]
+      : sessionCookie.split('.')[0];
+
+    if (!sessionId) {
+      throw new UnauthorizedException('Invalid session format');
+    }
+
     const redisPrefix = this.configService.getOrThrow('SESSION_PREFIX');
     const redisKey = `${redisPrefix}${sessionId}`;
 
     const sessionData = await this.redisClient.get(redisKey);
     if (!sessionData) {
-      return false;
+      throw new UnauthorizedException('Session not found in Redis');
     }
 
-    const parsedSessionData = JSON.parse(sessionData);
-
-    console.log('SESSIONDATA: ', parsedSessionData);
+    let parsedSessionData;
+    try {
+      parsedSessionData = JSON.parse(sessionData);
+    } catch (error) {
+      logger.error('Failed to parse session data', error, 'SessionAuthGuard');
+      throw new UnauthorizedException('Failed to parse session data');
+    }
 
     const userId = parsedSessionData.passport?.user;
     if (!userId) {
-      return false;
+      throw new UnauthorizedException('User ID not found in session');
     }
-
-    console.log('USERID: ', userId);
 
     request.userId = userId;
     return true;

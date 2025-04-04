@@ -1,3 +1,3 @@
-export interface ExtendedRequest extends Request {
+export interface RequestWithUserId extends Request {
   userId?: string;
 }

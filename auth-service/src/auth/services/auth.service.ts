@@ -23,6 +23,8 @@ export class AuthService {
     private readonly tokenService: TokenService,
     @Inject('NOTIFICATION_SERVICE')
     private readonly notificationClient: ClientProxy,
+    @Inject('USER_SERVICE')
+    private readonly userClient: ClientProxy,
     private readonly configService: ConfigService,
   ) {}
 
@@ -37,12 +39,19 @@ export class AuthService {
 
     const hashedPassword = await this.hashPassword(registerDto.password);
 
-    await this.prismaService.user.create({
+    const user = await this.prismaService.user.create({
       data: {
         email: registerDto.email,
         password: hashedPassword,
       },
     });
+
+    this.userClient.emit('create_user', {
+      userId: user.id,
+      username: registerDto.username,
+    });
+
+    // EMAIL VERIFICATION
 
     const token = await this.tokenService.generateToken(
       registerDto.email,
