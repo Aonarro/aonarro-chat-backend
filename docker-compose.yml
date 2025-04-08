@@ -68,25 +68,25 @@ services:
   #     - chat_network
   #   restart: unless-stopped
 
-  # file-service:
-  #   build:
-  #     context: ./file-service
-  #     dockerfile: Dockerfile
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ./file-service:/usr/src/app
-  #   command: yarn start:dev
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - chat_network
-  #   restart: unless-stopped
+  file-service:
+    build:
+      context: ./file-service
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./file-service/src:/usr/src/app/src
+    command: yarn start:dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - chat_network
+    restart: unless-stopped
 
   notification-service:
     build:

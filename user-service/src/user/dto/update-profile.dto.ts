@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -17,11 +17,7 @@ export class UpdateProfileDto {
   lastName?: string;
 
   @IsOptional()
-  @IsUrl(
-    {},
-    { message: 'Avatar URL must be a valid and properly formatted URL' },
-  )
-  avatarUrl?: string;
+  avatar?: Express.Multer.File;
 
   @IsOptional()
   @IsString({ message: 'Bio must be a valid string' })

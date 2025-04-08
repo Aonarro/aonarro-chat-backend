@@ -1,18 +1,34 @@
-import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { SessionAuthGuard } from '../../utils/guards/session-auth.guard';
 import { RequestWithUserId } from '../../utils/type/types';
 import { ProfileService } from '../services/profile.service';
-import { EventPattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CreateProfileDto } from '../dto/create-profile.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { FileValidationPipe } from 'src/utils/pipes/file-validation.pipe';
 
 @Controller('profile')
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
-  @EventPattern('create_user')
+  @MessagePattern('create_user')
   async createProfile(@Payload() data: CreateProfileDto) {
-    return this.profileService.createProfile(data.userId, data.username);
+    try {
+      await this.profileService.createProfile(data.userId, data.username);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
   }
 
   @Get()
@@ -24,11 +40,18 @@ export class ProfileController {
 
   @Patch()
   @UseGuards(SessionAuthGuard)
+  @UseInterceptors(FileInterceptor('avatar'))
   updateUserProfile(
     @Req() req: RequestWithUserId,
     @Body() updateProfileDto: UpdateProfileDto,
+    @UploadedFile(new FileValidationPipe()) avatarFile?: Express.Multer.File,
   ) {
     const userId = req.userId;
-    return this.profileService.updateProfile(userId, updateProfileDto);
+
+    const payload = {
+      ...updateProfileDto,
+      ...(avatarFile && { avatar: avatarFile }),
+    };
+    return this.profileService.updateProfile(userId, payload);
   }
 }

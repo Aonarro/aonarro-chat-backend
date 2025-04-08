@@ -17,6 +17,7 @@ import { EmailConfirmationController } from './controllers/email-confirmation.co
 import { EmailConfirmationService } from './services/email-confirmation.service';
 import { TokenService } from './services/token.service';
 import { ScheduleModule } from '@nestjs/schedule';
+import { UserController } from './controllers/user.controller';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     PassportModule.register({ session: true }),
     ScheduleModule.forRoot(),
   ],
-  controllers: [AuthController, EmailConfirmationController],
+  controllers: [AuthController, EmailConfirmationController, UserController],
   providers: [
     AuthService,
     LocalStrategy,

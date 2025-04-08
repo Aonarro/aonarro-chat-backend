@@ -6,6 +6,10 @@ import * as cookieParser from 'cookie-parser';
 import { ProfileController } from './controllers/profile.controller';
 import { ProfileService } from './services/profile.service';
 import { PrismaModule } from '../config/prisma/prisma.module';
+import { UserService } from './services/user.service';
+import { RabbitMQModule } from 'src/config/rabbitmq/rabbitmq.module';
+import { MulterModule } from '@nestjs/platform-express';
+import { FileService } from './services/file.service';
 
 @Module({
   imports: [
@@ -13,10 +17,16 @@ import { PrismaModule } from '../config/prisma/prisma.module';
       isGlobal: true,
     }),
     RedisModule,
+    RabbitMQModule,
     PrismaModule,
+    MulterModule.register({
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+    }),
   ],
   controllers: [ProfileController],
-  providers: [SessionAuthGuard, ProfileService],
+  providers: [SessionAuthGuard, ProfileService, UserService, FileService],
 })
 export class UserModule implements NestModule {
   constructor() {}

@@ -1,15 +1,15 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { FileModule } from './file.module';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const appContext = await NestFactory.createApplicationContext(AppModule);
+  const appContext = await NestFactory.createApplicationContext(FileModule);
   const configService = appContext.get(ConfigService);
 
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppModule,
+    FileModule,
     {
       transport: Transport.RMQ,
       options: {

@@ -15,6 +15,7 @@ import { LoginDto } from '../../auth/dto/login.dto';
 import { ConfigService } from '@nestjs/config';
 import { TokenService } from './token.service';
 import { TokenType, User } from '../../../prisma/__generated__';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class AuthService {
@@ -39,17 +40,35 @@ export class AuthService {
 
     const hashedPassword = await this.hashPassword(registerDto.password);
 
-    const user = await this.prismaService.user.create({
-      data: {
-        email: registerDto.email,
-        password: hashedPassword,
-      },
-    });
+    try {
+      await this.prismaService.$transaction(async (prisma) => {
+        const user = await prisma.user.create({
+          data: {
+            email: registerDto.email,
+            password: hashedPassword,
+          },
+        });
 
-    this.userClient.emit('create_user', {
-      userId: user.id,
-      username: registerDto.username,
-    });
+        const createdProfile = await firstValueFrom(
+          this.userClient.send('create_user', {
+            userId: user.id,
+            username: registerDto.username,
+          }),
+        );
+
+        if (!createdProfile.success) {
+          await prisma.user.delete({
+            where: { id: user.id },
+          });
+          throw new ConflictException(createdProfile.message);
+        }
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      throw new ConflictException('User with this email already exists');
+    }
 
     // EMAIL VERIFICATION
 
@@ -117,7 +136,10 @@ export class AuthService {
     );
   }
 
-  public async logOut(req: Request, res: Response): Promise<void> {
+  public async logOut(
+    req: Request,
+    res: Response,
+  ): Promise<{ message: string }> {
     return new Promise((resolve, reject) => {
       if (!req.isAuthenticated()) {
         reject(new UnauthorizedException('User is not authenticated'));
@@ -143,7 +165,7 @@ export class AuthService {
             sameSite: 'lax',
           });
 
-          resolve();
+          resolve({ message: 'Logout successful' });
         });
       });
     });
