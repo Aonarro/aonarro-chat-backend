@@ -6,10 +6,14 @@ import * as cookieParser from 'cookie-parser';
 import { ProfileController } from './controllers/profile.controller';
 import { ProfileService } from './services/profile.service';
 import { PrismaModule } from '../config/prisma/prisma.module';
-import { UserService } from './services/user.service';
+import { AuthService } from './services/auth.service';
 import { RabbitMQModule } from 'src/config/rabbitmq/rabbitmq.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { FileService } from './services/file.service';
+import { FormDataJsonPipe } from 'src/utils/pipes/form-data-json.pipe';
+import { UserController } from './controllers/user.controller';
+import { FriendService } from './services/friend.service';
+import { FriendController } from './controllers/friend.controller';
 
 @Module({
   imports: [
@@ -25,8 +29,15 @@ import { FileService } from './services/file.service';
       },
     }),
   ],
-  controllers: [ProfileController],
-  providers: [SessionAuthGuard, ProfileService, UserService, FileService],
+  controllers: [ProfileController, UserController, FriendController],
+  providers: [
+    SessionAuthGuard,
+    ProfileService,
+    AuthService,
+    FileService,
+    FormDataJsonPipe,
+    FriendService,
+  ],
 })
 export class UserModule implements NestModule {
   constructor() {}

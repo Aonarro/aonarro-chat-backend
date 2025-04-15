@@ -121,12 +121,37 @@ exports.Prisma.ProfileScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   username: 'username',
+  email: 'email',
   firstName: 'firstName',
   lastName: 'lastName',
   avatarUrl: 'avatarUrl',
   bio: 'bio',
+  lastLoginAt: 'lastLoginAt',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  settingsId: 'settingsId'
+};
+
+exports.Prisma.AccountSettingsScalarFieldEnum = {
+  id: 'id',
+  isTwoFactorEnabled: 'isTwoFactorEnabled',
+  showLastSeen: 'showLastSeen',
+  profileVisible: 'profileVisible'
+};
+
+exports.Prisma.FriendRequestScalarFieldEnum = {
+  id: 'id',
+  senderId: 'senderId',
+  receiverId: 'receiverId',
+  status: 'status',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.FriendshipScalarFieldEnum = {
+  id: 'id',
+  user1Id: 'user1Id',
+  user2Id: 'user2Id',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -146,7 +171,10 @@ exports.Prisma.NullsOrder = {
 
 
 exports.Prisma.ModelName = {
-  Profile: 'Profile'
+  Profile: 'Profile',
+  AccountSettings: 'AccountSettings',
+  FriendRequest: 'FriendRequest',
+  Friendship: 'Friendship'
 };
 
 /**

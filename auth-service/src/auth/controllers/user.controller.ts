@@ -1,17 +1,20 @@
 import { Controller } from '@nestjs/common';
 
-import { AuthService } from '../services/auth.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { UserService } from '../services/user.service';
 
 @Controller()
 export class UserController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly userService: UserService) {}
 
-  @MessagePattern('get_user_email')
-  async getUserEmail(@Payload() data: { userId: string }) {
-    console.log('getUserEmail', data);
-    const { userId } = data;
-    const userData = await this.authService.getUserDataById(userId);
-    return userData;
+  @MessagePattern('change_user_email')
+  async changeUserEmail(@Payload() data: { userId: string; newEmail: string }) {
+    const { userId, newEmail } = data;
+    try {
+      await this.userService.changeUserEmail(userId, newEmail);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
   }
 }

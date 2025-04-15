@@ -6,7 +6,6 @@ import {
   HttpStatus,
   Req,
   UseGuards,
-  Get,
   Res,
 } from '@nestjs/common';
 import { RegisterDto } from '../../auth/dto/register.dto';
@@ -16,6 +15,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { SessionAuthGuard } from '../../utils/guards/session-auth.guard';
 import { IUser } from '../../utils/types/types';
 import { AuthService } from '../services/auth.service';
+import { ConfirmPasswordDto } from '../dto/confirm-password.dto';
 
 @Controller()
 export class AuthController {
@@ -34,12 +34,17 @@ export class AuthController {
     return this.authService.login(req, loginDto);
   }
 
-  @Get('check')
+  @Post('check-password')
   @UseGuards(SessionAuthGuard)
-  checkAuth(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const userId = (req.user as IUser).id;
-    res.setHeader('X-User-Id', userId);
-    return { isAuthenticated: true };
+  checkAuth(
+    @Req() req: Request,
+    @Body() confirmPasswordDto: ConfirmPasswordDto,
+  ) {
+    const userEmail = (req.user as IUser).email;
+    return this.authService.checkCurrentPassword(
+      userEmail,
+      confirmPasswordDto.password,
+    );
   }
 
   @Post('logout')

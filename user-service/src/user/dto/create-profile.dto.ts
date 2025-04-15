@@ -1,4 +1,10 @@
-import { IsString, MinLength, MaxLength } from 'class-validator';
+import {
+  IsString,
+  MinLength,
+  MaxLength,
+  IsEmail,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class CreateProfileDto {
   @IsString({ message: 'Username must be a valid string' })
@@ -8,4 +14,9 @@ export class CreateProfileDto {
 
   @IsString({ message: 'User ID must be a valid string' })
   userId: string;
+
+  @IsString({ message: 'Email must be a text value' })
+  @IsEmail({}, { message: 'Please enter a valid email address' })
+  @IsNotEmpty({ message: 'Email is required' })
+  email: string;
 }

@@ -2,8 +2,6 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getConfirmationTemplate } from './templates/confirmation.template';
-// import { EventPattern, Payload } from '@nestjs/microservices';
-// import { getConfirmationTemplate } from './templates/confirmation.template';
 
 @Injectable()
 export class MailService {
@@ -29,11 +27,14 @@ export class MailService {
         html,
       });
 
-      console.log('✅ Письмо успешно отправлено:', result);
+      this.logger.log(`✅ Email successfully sent to: ${email}`);
       return result;
     } catch (error) {
-      console.error('❌ Ошибка отправки письма:', error);
-      throw new Error(`Ошибка отправки письма: ${error.message}`);
+      this.logger.error(
+        `❌ Failed to send email to: ${email}. Error: ${error.message}`,
+        error.stack,
+      );
+      throw new Error(`Failed to send email: ${error.message}`);
     }
   }
 }

@@ -10,13 +10,7 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  app.useGlobalPipes(new ValidationPipe());
 
   const rabbitmqHost = configService.getOrThrow('RABBITMQ_HOST');
   const rabbitmqPort = configService.getOrThrow('RABBITMQ_PORT');

@@ -1,26 +1,51 @@
-import { UserService } from './user.service';
-import { ConflictException, Injectable } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma/prisma.service';
-import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { FileService } from './file.service';
+import { CreateProfileDto } from '../dto/create-profile.dto';
+import { ProfileResponse, UpdateProfilePayload } from 'src/utils/types/types';
 
 @Injectable()
 export class ProfileService {
+  private readonly logger = new Logger(ProfileService.name);
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly userService: UserService,
+    private readonly authService: AuthService,
     private readonly fileService: FileService,
   ) {}
 
-  async createProfile(userId: string, username: string) {
+  async lastLoginAt(data) {
+    this.logger.log(`Updating last login at for userId: ${data.userId}`);
+    return await this.prismaService.profile.update({
+      where: { userId: data.userId },
+      data: {
+        lastLoginAt: new Date(data.loginTime),
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  async createProfile(data: CreateProfileDto) {
+    this.logger.log(`Creating profile for userId: ${data.userId}`);
     try {
+      this.logger.log(
+        `Profile created successfully for userId: ${data.userId}`,
+      );
       return await this.prismaService.profile.create({
         data: {
-          userId: userId,
-          username: username,
+          userId: data.userId,
+          username: data.username,
+          email: data.email,
+          settings: {
+            create: {},
+          },
         },
       });
     } catch (error) {
+      this.logger.error(
+        `Failed to create profile: ${error.message}`,
+        error.stack,
+      );
       if (error.code === 'P2002') {
         throw new ConflictException('Username already exists');
       }
@@ -28,64 +53,156 @@ export class ProfileService {
     }
   }
 
-  async getProfile(userId: string) {
-    const userData = await this.userService.getUserData(userId);
-
+  async getProfile(userId: string): Promise<ProfileResponse> {
+    this.logger.log(`Fetching profile for userId: ${userId}`);
     const profile = await this.prismaService.profile.findUnique({
       where: {
         userId: userId,
       },
       omit: {
         updatedAt: true,
+        settingsId: true,
+        userId: true,
+      },
+      include: {
+        settings: {
+          omit: {
+            id: true,
+          },
+        },
       },
     });
 
-    if (!userData) {
-      return profile;
+    if (!profile) {
+      this.logger.warn(`Profile not found for userId: ${userId}`);
     } else {
+      this.logger.log(`Successfully fetched profile for userId: ${userId}`);
     }
 
-    return {
-      ...profile,
-      email: userData.email,
-    };
+    return profile;
   }
 
-  async updateProfile(
-    userId: string,
-    updateProfileDto: UpdateProfileDto,
-  ): Promise<{ message: string }> {
-    const { avatar, ...profileData } = updateProfileDto;
+  async updateProfile(userId: string, payload: UpdateProfilePayload) {
+    this.logger.log(`Updating profile for userId: ${userId}`);
+    const { settings, email, username, avatar, ...profileData } = payload;
+
     const profile = await this.getProfile(userId);
 
-    // Only for profileData without avatar
-    if (Object.keys(profileData).length > 0) {
-      await this.prismaService.profile.update({
-        where: { userId },
-        data: profileData,
+    if (email) {
+      this.logger.log(`Checking if email ${email} is already in use`);
+      const existingUser = await this.prismaService.profile.findFirst({
+        where: {
+          email: email,
+        },
       });
+
+      if (existingUser && existingUser.userId !== userId) {
+        this.logger.warn(`Email ${email} is already taken by another user`);
+        throw new ConflictException('Email already in use');
+      }
     }
 
-    //Only for avatar
-    if (avatar) {
-      if (profile.avatarUrl) {
-        const parsedUrl = new URL(profile.avatarUrl);
-        const key = parsedUrl.pathname.slice(1);
-
-        this.fileService.deleteExistingAvatar(key);
+    if (username) {
+      this.logger.log(`Checking if username ${username} is already in use`);
+      const existingUserWithUsername =
+        await this.prismaService.profile.findFirst({
+          where: { username },
+        });
+      if (
+        existingUserWithUsername &&
+        existingUserWithUsername.userId !== userId
+      ) {
+        this.logger.warn(
+          `Username ${username} is already taken by another user`,
+        );
+        throw new ConflictException('Username already in use');
       }
+    }
 
-      const avatarBuffer = avatar.buffer;
-      const avatarUrl = await this.fileService.saveAvatarToStore(
-        userId,
-        avatarBuffer,
-      );
+    if (email || Object.keys(profileData).length > 0 || avatar || settings) {
+      this.logger.log(`Applying profile updates for userId: ${userId}`);
+      return await this.prismaService.$transaction(async (prisma) => {
+        //Email changing
+        if (email) {
+          this.logger.log(`Updating email for userId: ${userId}`);
+          const response = await this.authService.changeUserEmail(
+            userId,
+            email,
+          );
 
-      await this.prismaService.profile.update({
-        where: { userId },
-        data: {
-          avatarUrl: avatarUrl,
-        },
+          if (!response.success) {
+            this.logger.error(
+              `Failed to change email for userId: ${userId}: ${response.message}`,
+            );
+            throw new ConflictException(
+              response.message || 'Failed to change email in auth service',
+            );
+          }
+
+          await prisma.profile.update({
+            where: { userId: userId },
+            data: { email },
+          });
+        }
+
+        if (username) {
+          this.logger.log(`Updating username for userId: ${userId}`);
+          await prisma.profile.update({
+            where: { userId: userId },
+            data: { username },
+          });
+        }
+
+        // firstName, lastName, bio changing
+
+        if (Object.keys(profileData).length > 0) {
+          this.logger.log(`Updating profile fields for userId: ${userId}`);
+          await prisma.profile.update({
+            where: { userId: userId },
+            data: profileData,
+          });
+        }
+
+        //Avatar changing
+
+        if (avatar) {
+          this.logger.log(`Updating avatar for userId: ${userId}`);
+          if (profile.avatarUrl) {
+            const parsedUrl = new URL(profile.avatarUrl);
+            const key = parsedUrl.pathname.slice(1);
+            this.logger.log(`Deleting old avatar with key: ${key}`);
+            await this.fileService.deleteExistingAvatar(key);
+          }
+
+          const avatarBuffer = avatar.buffer;
+          const avatarUrl = await this.fileService.saveAvatarToStore(
+            userId,
+            avatarBuffer,
+          );
+
+          await prisma.profile.update({
+            where: { userId: userId },
+            data: { avatarUrl },
+          });
+        }
+
+        //Settings changing
+
+        if (settings) {
+          this.logger.log(`Updating settings for userId: ${userId}`);
+          await prisma.profile.update({
+            where: { userId: userId },
+            data: {
+              settings: {
+                update: {
+                  ...settings,
+                },
+              },
+            },
+          });
+        }
+        this.logger.log(`Profile successfully updated for userId: ${userId}`);
+        return { message: 'Profile updated successfully' };
       });
     }
 

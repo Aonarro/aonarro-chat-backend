@@ -22,7 +22,6 @@ export class TokenService {
     const token = this.generateNumericCode(length);
     const expiresIn = new Date(Date.now() + expiresInMinutes * 60 * 1000);
 
-    // Сохраняем токен в БД
     await this.prisma.token.create({
       data: { email, token, type, expiresIn },
     });

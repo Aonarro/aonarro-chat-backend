@@ -1,3 +1,4 @@
+import { UtilityFunctions } from './../../utils/functions/UtilityFunctions';
 import {
   ConflictException,
   Inject,
@@ -8,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma/prisma.service';
 import { RegisterDto } from '../../auth/dto/register.dto';
-import * as argon2 from 'argon2';
 import { ClientProxy } from '@nestjs/microservices';
 import { Request, Response } from 'express';
 import { LoginDto } from '../../auth/dto/login.dto';
@@ -16,6 +16,8 @@ import { ConfigService } from '@nestjs/config';
 import { TokenService } from './token.service';
 import { TokenType, User } from '../../../prisma/__generated__';
 import { firstValueFrom } from 'rxjs';
+import { UserService } from './user.service';
+import { PasswordService } from './password.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +29,9 @@ export class AuthService {
     @Inject('USER_SERVICE')
     private readonly userClient: ClientProxy,
     private readonly configService: ConfigService,
+    private readonly userService: UserService,
+    private readonly utilityFunctions: UtilityFunctions,
+    private readonly passwordService: PasswordService,
   ) {}
 
   public async register(
@@ -38,7 +43,9 @@ export class AuthService {
       throw new ConflictException('User with this email already exists');
     }
 
-    const hashedPassword = await this.hashPassword(registerDto.password);
+    const hashedPassword = await this.passwordService.hashPassword(
+      registerDto.password,
+    );
 
     try {
       await this.prismaService.$transaction(async (prisma) => {
@@ -53,6 +60,7 @@ export class AuthService {
           this.userClient.send('create_user', {
             userId: user.id,
             username: registerDto.username,
+            email: registerDto.email,
           }),
         );
 
@@ -100,33 +108,35 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    if (!user.isVerified) {
-      const existingToken = await this.tokenService.findTokenByEmail(
-        user.email,
-      );
+    const { success, profile } = await this.userService.getUserProfile(user.id);
+    const isTwoFactorEnabled = profile.settings.isTwoFactorEnabled;
 
-      if (existingToken) {
+    if (!user.isVerified) {
+      const result = await this.utilityFunctions.handleUnverifiedEmail(
+        loginDto.email,
+      );
+      if (result) return result;
+
+      return {
+        message: 'Please verify your email',
+        verifyEmail: true,
+      };
+    }
+
+    if (user.isVerified && isTwoFactorEnabled) {
+      if (success) {
+        const result = await this.utilityFunctions.handleUnverifiedEmail(
+          loginDto.email,
+        );
+        if (result) return result;
+
         return {
-          message:
-            'Please check your inbox (including the "Spam" folder). If you haven’t received the email, try requesting the code again in a few minutes.',
+          message: 'Please verify your email',
           verifyEmail: true,
         };
+      } else {
+        throw new InternalServerErrorException();
       }
-
-      const token = await this.tokenService.generateToken(
-        loginDto.email,
-        TokenType.VERIFICATION,
-        15,
-      );
-
-      this.notificationClient.emit('send_verification_email', {
-        email: loginDto.email,
-        token,
-      });
-
-      throw new UnauthorizedException(
-        'Please verify your email before logging in',
-      );
     }
 
     return await this.authenticateAndSaveSession(
@@ -180,8 +190,27 @@ export class AuthService {
       return null;
     }
 
-    const isValidPassword = await argon2.verify(user.password, password);
+    const isValidPassword = this.passwordService.isPasswordValid(
+      user.password,
+      password,
+    );
     return isValidPassword ? user : null;
+  }
+
+  public async checkCurrentPassword(email: string, password: string) {
+    const userData = await this.getUserDataByEmail(email);
+    const isPasswordValid = await this.passwordService.isPasswordValid(
+      userData.password,
+      password,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Incorrect password');
+    }
+
+    return {
+      message: 'Password is valid, now you can change your sensitive data',
+    };
   }
 
   public async authenticateAndSaveSession(
@@ -196,6 +225,7 @@ export class AuthService {
         }
 
         await this.saveSession(req);
+        this.userService.setLastUserLogin(user.id);
         resolve(message ? { message: message } : null);
       });
     });
@@ -211,10 +241,6 @@ export class AuthService {
         }
       });
     });
-  }
-
-  private async hashPassword(password: string): Promise<string> {
-    return await argon2.hash(password);
   }
 
   public async getUserDataByEmail(email: string): Promise<User | undefined> {

@@ -18,6 +18,9 @@ import { EmailConfirmationService } from './services/email-confirmation.service'
 import { TokenService } from './services/token.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UserController } from './controllers/user.controller';
+import { UserService } from './services/user.service';
+import { UtilityFunctions } from '@/utils/functions/UtilityFunctions';
+import { PasswordService } from './services/password.service';
 
 @Module({
   imports: [
@@ -34,6 +37,9 @@ import { UserController } from './controllers/user.controller';
     SessionSerializer,
     EmailConfirmationService,
     TokenService,
+    UserService,
+    PasswordService,
+    UtilityFunctions,
   ],
 })
 export class AuthModule implements NestModule {

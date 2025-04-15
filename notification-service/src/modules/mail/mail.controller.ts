@@ -11,6 +11,9 @@ export class MailController {
   public async sendConfirmationEmail(
     @Payload() data: { email: string; token: string },
   ) {
+    this.logger.log(
+      `Received 'send_verification_email' event for email: ${data.email}`,
+    );
     return this.mailService.sendConfirmationEmail(data);
   }
 }

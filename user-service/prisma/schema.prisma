@@ -11,16 +11,73 @@ datasource db {
 }
 
 model Profile {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  username  String   @unique
-  firstName String?
-  lastName  String?
-  avatarUrl String?
-  bio       String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String          @id @default(uuid())
+  userId        String          @unique
+  username      String          @unique
+  email         String
+  firstName     String?
+  lastName      String?
+  avatarUrl     String?
+  bio           String?
+  lastLoginAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations for settings
+  settings      AccountSettings @relation(fields: [settingsId], references: [id])
+  settingsId    String          @unique
+
+
+   // Relations for friend requests
+  sentRequests     FriendRequest[] @relation("Sender")
+  receivedRequests FriendRequest[] @relation("Receiver")
+
+  // Relations for friendships
+  friendshipsInitiated Friendship[] @relation("User1")
+  friendshipsReceived  Friendship[] @relation("User2")
 
   @@map("profiles")
   @@schema("user")
+}
+
+model AccountSettings {
+  id                 String   @id @default(uuid())
+  isTwoFactorEnabled Boolean  @default(false)
+  showLastSeen       Boolean  @default(true)
+  profileVisible     Boolean  @default(true)
+  profile            Profile?
+
+  @@map("account_settings")
+  @@schema("user")
+}
+
+model FriendRequest {
+  id                 String   @id @default(uuid())
+  sender     Profile  @relation("Sender", fields: [senderId], references: [id])
+  senderId   String
+  receiver   Profile  @relation("Receiver", fields: [receiverId], references: [id])
+  receiverId String
+  status     String   @default("PENDING") 
+  createdAt  DateTime @default(now())
+   @@map("friend_request")
+   @@schema("user")
+}
+
+model Friendship {
+  id                 String   @id @default(uuid())
+  user1     Profile  @relation("User1", fields: [user1Id], references: [id])
+  user1Id   String
+  user2     Profile  @relation("User2", fields: [user2Id], references: [id])
+  user2Id   String
+  createdAt DateTime @default(now())
+
+ @@map("friend")
+ @@schema("user")
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+   @@schema("user")
 }
