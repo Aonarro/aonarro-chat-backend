@@ -24,3 +24,14 @@ export interface ProfileResponse {
 export type UpdateProfilePayload = UpdateProfileDto & {
   avatar?: Express.Multer.File;
 };
+
+export interface FriendRequestResponse {
+  id: string;
+  status: string;
+  createdAt: Date;
+  sender: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+  };
+}
