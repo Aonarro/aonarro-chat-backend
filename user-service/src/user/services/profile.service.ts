@@ -4,6 +4,7 @@ import { PrismaService } from '../../config/prisma/prisma.service';
 import { FileService } from './file.service';
 import { CreateProfileDto } from '../dto/create-profile.dto';
 import { ProfileResponse, UpdateProfilePayload } from 'src/utils/types/types';
+import { ElasticSearchService } from './elastic-search.service';
 
 @Injectable()
 export class ProfileService {
@@ -12,6 +13,7 @@ export class ProfileService {
     private readonly prismaService: PrismaService,
     private readonly authService: AuthService,
     private readonly fileService: FileService,
+    private readonly elasticSearchService: ElasticSearchService,
   ) {}
 
   async lastLoginAt(data) {
@@ -31,7 +33,7 @@ export class ProfileService {
       this.logger.log(
         `Profile created successfully for userId: ${data.userId}`,
       );
-      return await this.prismaService.profile.create({
+      const createdProfile = await this.prismaService.profile.create({
         data: {
           userId: data.userId,
           username: data.username,
@@ -41,6 +43,11 @@ export class ProfileService {
           },
         },
       });
+      this.logger.log(
+        `Profile created successfully for userId: ${data.userId}`,
+      );
+
+      await this.elasticSearchService.indexUserProfile(createdProfile);
     } catch (error) {
       this.logger.error(
         `Failed to create profile: ${error.message}`,
