@@ -6,11 +6,15 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { FriendRequestResponse } from 'src/utils/types/types';
+import { ElasticSearchService } from './elastic-search.service';
 
 @Injectable()
 export class FriendService {
   private readonly logger = new Logger(FriendService.name);
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly elasticSearchService: ElasticSearchService,
+  ) {}
 
   async sendFriendRequest(userId: string, receiverUsername: string) {
     const sender = await this.prismaService.profile.findFirst({
@@ -224,5 +228,11 @@ export class FriendService {
       success: true,
       data: friends,
     };
+  }
+
+  async searchUsers(query: string) {
+    const users = await this.elasticSearchService.searchProfiles(query);
+
+    return users;
   }
 }

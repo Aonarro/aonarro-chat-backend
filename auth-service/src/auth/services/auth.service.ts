@@ -15,7 +15,7 @@ import { LoginDto } from '../../auth/dto/login.dto';
 import { ConfigService } from '@nestjs/config';
 import { TokenService } from './token.service';
 import { TokenType, User } from '../../../prisma/__generated__';
-import { firstValueFrom } from 'rxjs';
+import { catchError, firstValueFrom, timeout } from 'rxjs';
 import { UserService } from './user.service';
 import { PasswordService } from './password.service';
 
@@ -56,26 +56,33 @@ export class AuthService {
           },
         });
 
-        const createdProfile = await firstValueFrom(
-          this.userClient.send('create_user', {
-            userId: user.id,
-            username: registerDto.username,
-            email: registerDto.email,
-          }),
-        );
-
-        if (!createdProfile.success) {
+        try {
+          await firstValueFrom(
+            this.userClient
+              .send('create_user', {
+                userId: user.id,
+                username: registerDto.username,
+                email: registerDto.email,
+              })
+              .pipe(
+                timeout(5000),
+                catchError((error) => {
+                  throw error;
+                }),
+              ),
+          );
+        } catch (error) {
           await prisma.user.delete({
             where: { id: user.id },
           });
-          throw new ConflictException(createdProfile.message);
+          this.utilityFunctions.parseRpcError(error);
         }
       });
     } catch (error) {
       if (error instanceof ConflictException) {
         throw error;
       }
-      throw new ConflictException('User with this email already exists');
+      throw new ConflictException('Registration failed: ' + error.message);
     }
 
     // EMAIL VERIFICATION
@@ -109,6 +116,11 @@ export class AuthService {
     }
 
     const { success, profile } = await this.userService.getUserProfile(user.id);
+
+    if (!success) {
+      throw new InternalServerErrorException('Failed to load user profile');
+    }
+
     const isTwoFactorEnabled = profile.settings.isTwoFactorEnabled;
 
     if (!user.isVerified) {

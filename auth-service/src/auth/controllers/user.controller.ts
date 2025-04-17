@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { UserService } from '../services/user.service';
 
 @Controller()
@@ -14,7 +14,15 @@ export class UserController {
       await this.userService.changeUserEmail(userId, newEmail);
       return { success: true };
     } catch (error) {
-      return { success: false, message: error.message };
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      throw new RpcException({
+        message: error.message || 'Failed to change email',
+        code: 'EMAIL_CHANGING_FAILED',
+        status: error.status || 500,
+      });
     }
   }
 }

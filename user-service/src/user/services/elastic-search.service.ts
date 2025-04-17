@@ -1,17 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
-import { Profile } from 'prisma/__generated__';
 
-// Omit<
-//       Profile,
-//       'updatedAt' | 'lastLoginAt' | 'email' | 'bio' | 'settingsId' | 'userId'
-//     >,
+import { Profile } from 'prisma/__generated__';
+import { ProfileResponse } from 'src/utils/types/types';
 
 @Injectable()
 export class ElasticSearchService {
   constructor(private readonly elasticsearchService: ElasticsearchService) {}
 
-  async indexUserProfile(profile: Profile) {
+  async indexUserProfile(profile: Profile | ProfileResponse) {
     await this.elasticsearchService.index({
       index: 'profiles',
       id: profile.id,
@@ -19,7 +16,7 @@ export class ElasticSearchService {
         username: profile.username,
         avatarUrl: profile.avatarUrl,
         firstName: profile.firstName,
-        lastName: profile.firstName,
+        lastName: profile.lastName,
         createdAt: profile.createdAt,
       },
     });
@@ -37,7 +34,7 @@ export class ElasticSearchService {
         },
       },
       sort: [{ createdAt: 'desc' }],
-      size: 20,
+      size: 10,
     });
 
     return hits.hits.map((hit) => hit._source);

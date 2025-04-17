@@ -1,6 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
 import { ProfileService } from '../services/profile.service';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 
 @Controller('profile')
 export class UserController {
@@ -9,12 +9,20 @@ export class UserController {
 
   @MessagePattern('get_user_profile')
   async getUserProfileForAuth(@Payload() data: { userId: string }) {
+    const { userId } = data;
     try {
-      const { userId } = data;
       const profile = await this.profileService.getProfile(userId);
       return { success: true, profile: profile };
-    } catch (err) {
-      return { success: false, message: err.message };
+    } catch (error) {
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      throw new RpcException({
+        message: error.message || 'Failed to get profile',
+        code: 'PROFILE_FETCHING_FAILED',
+        status: error.status || 500,
+      });
     }
   }
 }

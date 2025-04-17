@@ -881,10 +881,10 @@
     path-to-regexp "3.3.0"
     tslib "2.8.1"
 
-"@nestjs/elasticsearch@^11.0.0":
-  version "11.0.0"
-  resolved "https://registry.yarnpkg.com/@nestjs/elasticsearch/-/elasticsearch-11.0.0.tgz#ebca6cb312ea87c4974814cd2ed81d16ce0e86bb"
-  integrity sha512-7wf8+I1Q9M4sNRr+NY1cF8XdEhCelHjozQjgwGjoQDhs+Kp8VsLEaUQnYGR1oSEigSUEEvGOhgNaYQz7zbZpAg==
+"@nestjs/elasticsearch@^11.1.0":
+  version "11.1.0"
+  resolved "https://registry.yarnpkg.com/@nestjs/elasticsearch/-/elasticsearch-11.1.0.tgz#1720f1dc22880b33ad70345b48549a156edf40aa"
+  integrity sha512-NwMakVs8LeXUksaSNp0ejhv223yVCK4w9iqMBrsonKj2gl4sBIBrAgJq/aXhD9bJCNLYb+waoRAsxuuPxYcjXw==
 
 "@nestjs/microservices@^11.0.11":
   version "11.0.11"
@@ -1130,6 +1130,11 @@
   version "2.1.5"
   resolved "https://registry.yarnpkg.com/@types/cookiejar/-/cookiejar-2.1.5.tgz#14a3e83fa641beb169a2dd8422d91c3c345a9a78"
   integrity sha512-he+DHOWReW0nghN24E1WUqM0efK4kI9oTqDm6XmK8ZPe2djZ90BSNdGnIyCLzCPw7/pogPlGbzI2wHGGmi4O/Q==
+
+"@types/elasticsearch@^5.0.43":
+  version "5.0.43"
+  resolved "https://registry.yarnpkg.com/@types/elasticsearch/-/elasticsearch-5.0.43.tgz#a3bbf56922de2d0e24c6117e8de1c9b50029c3c6"
+  integrity sha512-N+MpzURpDCWd7zaJ7CE1aU+nBSeAABLhDE0lGodQ0LLftx7ku6hjTXLr9OAFZLSXiWL3Xxx8jts485ynrcm5NA==
 
 "@types/eslint-scope@^3.7.7":
   version "3.7.7"

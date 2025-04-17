@@ -5,6 +5,7 @@ import {
   Logger,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -58,5 +59,16 @@ export class FriendController {
   async friends(@Req() req: RequestWithUserId) {
     const userId = req.userId;
     return this.friendService.getFriends(userId);
+  }
+
+  @Get('search')
+  async searchUsers(@Query('q') query: string) {
+    if (!query) {
+      return [];
+    }
+
+    const result = await this.friendService.searchUsers(query);
+
+    return result;
   }
 }

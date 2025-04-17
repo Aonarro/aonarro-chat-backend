@@ -16,6 +16,7 @@ import { FriendService } from './services/friend.service';
 import { FriendController } from './controllers/friend.controller';
 import { ElasticSearchModule } from 'src/config/elastic-search/elastic-search.module';
 import { ElasticSearchService } from './services/elastic-search.service';
+import { UtilityFunctions } from 'src/utils/functions/UtilityFunctions';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ElasticSearchService } from './services/elastic-search.service';
     FormDataJsonPipe,
     FriendService,
     ElasticSearchService,
+    UtilityFunctions,
   ],
 })
 export class UserModule implements NestModule {

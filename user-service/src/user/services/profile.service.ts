@@ -1,10 +1,16 @@
 import { AuthService } from './auth.service';
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../../config/prisma/prisma.service';
 import { FileService } from './file.service';
 import { CreateProfileDto } from '../dto/create-profile.dto';
 import { ProfileResponse, UpdateProfilePayload } from 'src/utils/types/types';
 import { ElasticSearchService } from './elastic-search.service';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class ProfileService {
@@ -29,33 +35,44 @@ export class ProfileService {
 
   async createProfile(data: CreateProfileDto) {
     this.logger.log(`Creating profile for userId: ${data.userId}`);
-    try {
-      this.logger.log(
-        `Profile created successfully for userId: ${data.userId}`,
-      );
-      const createdProfile = await this.prismaService.profile.create({
-        data: {
-          userId: data.userId,
-          username: data.username,
-          email: data.email,
-          settings: {
-            create: {},
-          },
-        },
-      });
-      this.logger.log(
-        `Profile created successfully for userId: ${data.userId}`,
-      );
 
-      await this.elasticSearchService.indexUserProfile(createdProfile);
+    try {
+      await this.prismaService.$transaction(async (prisma) => {
+        const createdProfile = await prisma.profile.create({
+          data: {
+            userId: data.userId,
+            username: data.username,
+            email: data.email,
+            settings: {
+              create: {},
+            },
+          },
+        });
+
+        this.logger.log(
+          `Profile created successfully for userId: ${data.userId}`,
+        );
+
+        try {
+          await this.elasticSearchService.indexUserProfile(createdProfile);
+        } catch (elasticError) {
+          this.logger.error(
+            `ElasticSearch index error: ${elasticError.message}`,
+            elasticError.stack,
+          );
+          throw new RpcException({
+            code: 'ELASTICSEARCH_ERROR',
+            message: 'Failed to index profile in ElasticSearch',
+            status: 500,
+          });
+        }
+      });
     } catch (error) {
       this.logger.error(
-        `Failed to create profile: ${error.message}`,
+        `Profile creation failed: ${error.message}`,
         error.stack,
       );
-      if (error.code === 'P2002') {
-        throw new ConflictException('Username already exists');
-      }
+
       throw error;
     }
   }
@@ -128,28 +145,24 @@ export class ProfileService {
 
     if (email || Object.keys(profileData).length > 0 || avatar || settings) {
       this.logger.log(`Applying profile updates for userId: ${userId}`);
-      return await this.prismaService.$transaction(async (prisma) => {
+      await this.prismaService.$transaction(async (prisma) => {
         //Email changing
         if (email) {
           this.logger.log(`Updating email for userId: ${userId}`);
-          const response = await this.authService.changeUserEmail(
-            userId,
-            email,
-          );
+          try {
+            await this.authService.changeUserEmail(userId, email);
 
-          if (!response.success) {
+            await prisma.profile.update({
+              where: { userId: userId },
+              data: { email },
+            });
+          } catch (error) {
             this.logger.error(
-              `Failed to change email for userId: ${userId}: ${response.message}`,
+              `Error while changing email for userId: ${userId}`,
+              error.stack,
             );
-            throw new ConflictException(
-              response.message || 'Failed to change email in auth service',
-            );
+            throw error;
           }
-
-          await prisma.profile.update({
-            where: { userId: userId },
-            data: { email },
-          });
         }
 
         if (username) {
@@ -174,23 +187,32 @@ export class ProfileService {
 
         if (avatar) {
           this.logger.log(`Updating avatar for userId: ${userId}`);
-          if (profile.avatarUrl) {
-            const parsedUrl = new URL(profile.avatarUrl);
-            const key = parsedUrl.pathname.slice(1);
-            this.logger.log(`Deleting old avatar with key: ${key}`);
-            await this.fileService.deleteExistingAvatar(key);
+
+          try {
+            if (profile.avatarUrl) {
+              const parsedUrl = new URL(profile.avatarUrl);
+              const key = parsedUrl.pathname.slice(1);
+              this.logger.log(`Deleting old avatar with key: ${key}`);
+              await this.fileService.deleteExistingAvatar(key);
+            }
+
+            const avatarBuffer = avatar.buffer;
+            const avatarUrl = await this.fileService.saveAvatarToStore(
+              userId,
+              avatarBuffer,
+            );
+
+            await prisma.profile.update({
+              where: { userId: userId },
+              data: { avatarUrl },
+            });
+          } catch (error) {
+            this.logger.error(
+              `Failed to update avatar for userId: ${userId}`,
+              error.stack,
+            );
+            throw error;
           }
-
-          const avatarBuffer = avatar.buffer;
-          const avatarUrl = await this.fileService.saveAvatarToStore(
-            userId,
-            avatarBuffer,
-          );
-
-          await prisma.profile.update({
-            where: { userId: userId },
-            data: { avatarUrl },
-          });
         }
 
         //Settings changing
@@ -209,8 +231,29 @@ export class ProfileService {
           });
         }
         this.logger.log(`Profile successfully updated for userId: ${userId}`);
-        return { message: 'Profile updated successfully' };
       });
+    }
+
+    try {
+      const updatedProfile = await this.getProfile(userId);
+      console.log(updatedProfile);
+
+      const elasticSearchPromise =
+        this.elasticSearchService.indexUserProfile(updatedProfile);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Elasticsearch update timed out')),
+          5000,
+        ),
+      );
+
+      await Promise.race([elasticSearchPromise, timeoutPromise]);
+    } catch (error) {
+      this.logger.error(
+        'Failed to update Elasticsearch with new profile data',
+        error.stack,
+      );
+      throw new InternalServerErrorException('Failed to update Elasticsearch');
     }
 
     return { message: 'Profile updated successfully' };

@@ -35,3 +35,12 @@ export interface FriendRequestResponse {
     avatarUrl: string | null;
   };
 }
+
+export interface ElasticProfileBody {
+  id: string;
+  username: string;
+  avatarUrl: string;
+  firstName: string;
+  lastName: string;
+  createdAt: Date;
+}

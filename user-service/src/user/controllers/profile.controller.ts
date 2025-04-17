@@ -13,7 +13,12 @@ import {
 import { SessionAuthGuard } from '../../utils/guards/session-auth.guard';
 import { RequestWithUserId } from '../../utils/types/types';
 import { ProfileService } from '../services/profile.service';
-import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import {
+  EventPattern,
+  MessagePattern,
+  Payload,
+  RpcException,
+} from '@nestjs/microservices';
 import { CreateProfileDto } from '../dto/create-profile.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -43,9 +48,32 @@ export class ProfileController {
   async createProfile(@Payload() data: CreateProfileDto) {
     try {
       await this.profileService.createProfile(data);
-      return { success: true };
+      return { status: 'success' };
     } catch (error) {
-      return { success: false, message: error.message };
+      this.logger.error(`Profile creation failed for user ${data.userId}`, {
+        error: error.message,
+        stack: error.stack,
+        username: data.username,
+        errorCode: error.code,
+      });
+
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      if (error.code === 'P2002') {
+        throw new RpcException({
+          code: 'USERNAME_EXISTS',
+          message: 'Username already taken',
+          status: 409,
+        });
+      }
+
+      throw new RpcException({
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to create profile',
+        status: 500,
+      });
     }
   }
 

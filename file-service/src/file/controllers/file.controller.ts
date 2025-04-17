@@ -1,6 +1,11 @@
 import { Controller } from '@nestjs/common';
 import { ProfileAvatarService } from '../services/file.service';
-import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import {
+  EventPattern,
+  MessagePattern,
+  Payload,
+  RpcException,
+} from '@nestjs/microservices';
 
 @Controller('profile-avatar')
 export class ProfileAvatarConsumer {
@@ -16,13 +21,21 @@ export class ProfileAvatarConsumer {
   ) {
     const { avatarBuffer, userId } = data;
 
-    const AvatarBuffer = Buffer.from(avatarBuffer.data);
+    try {
+      const AvatarBuffer = Buffer.from(avatarBuffer.data);
 
-    const avatarUrl = await this.fileService.uploadUserAvatar(
-      userId,
-      AvatarBuffer,
-    );
-    return avatarUrl;
+      const avatarUrl = await this.fileService.uploadUserAvatar(
+        userId,
+        AvatarBuffer,
+      );
+      return avatarUrl;
+    } catch (error) {
+      throw new RpcException({
+        message: error.message || 'Failed to upload avatar',
+        code: 'AVATAR_UPLOAD_FAILED',
+        status: error.status || 500,
+      });
+    }
   }
 
   @EventPattern('delete-avatar')
