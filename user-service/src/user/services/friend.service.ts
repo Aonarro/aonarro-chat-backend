@@ -161,6 +161,7 @@ export class FriendService {
             id: true,
             username: true,
             avatarUrl: true,
+            lastLoginAt: true,
           },
         },
       },
@@ -196,6 +197,7 @@ export class FriendService {
             id: true,
             username: true,
             avatarUrl: true,
+            lastLoginAt: true,
           },
         },
         user2: {
@@ -203,6 +205,7 @@ export class FriendService {
             id: true,
             username: true,
             avatarUrl: true,
+            lastLoginAt: true,
           },
         },
       },

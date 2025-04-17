@@ -5,14 +5,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - '${AUTH_PORT}:8001'
-    environment:
-      POSTGRES_URI: ${POSTGRES_URI}
     env_file:
       - .env
     volumes:
-      - ./auth-service/src:/usr/src/app/src
-      - ./auth-service/prisma:/usr/src/app/prisma
-      - ./auth-service/logs:/usr/src/app/logs
+      - ./auth-service:/usr/src/app
+      - /usr/src/app/node_modules
     command: yarn start:dev
     depends_on:
       postgres:
@@ -34,8 +31,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./user-service/src:/usr/src/app/src
-      - ./user-service/prisma:/usr/src/app/prisma
+      - ./user-service:/usr/src/app       
+      - /usr/src/app/node_modules     
     command: yarn start:dev
     depends_on:
       postgres:
@@ -75,7 +72,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./file-service/src:/usr/src/app/src
+      - ./file-service:/usr/src/app       # Монтируем весь проект
+      - /usr/src/app/node_modules   
     command: yarn start:dev
     depends_on:
       postgres:
@@ -95,7 +93,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./notification-service/src:/usr/src/app/src
+      - ./notification-service:/usr/src/app       # Монтируем весь проект
+      - /usr/src/app/node_modules   
     command: yarn start:dev
     depends_on:
       postgres:
