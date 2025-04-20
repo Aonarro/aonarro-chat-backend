@@ -62,6 +62,7 @@ export class FriendController {
   }
 
   @Get('search')
+  @UseGuards(SessionAuthGuard)
   async searchUsers(@Query('q') query: string) {
     if (!query) {
       return [];

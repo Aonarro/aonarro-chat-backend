@@ -45,25 +45,26 @@ services:
       - chat_network
     restart: unless-stopped
 
-  # chat-service:
-  #   build:
-  #     context: ./chat-service
-  #     dockerfile: Dockerfile
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ./chat-service:/usr/src/app
-  #   command: yarn start:dev
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - chat_network
-  #   restart: unless-stopped
+  websocket-gateway-service:
+    build:
+      context: ./websocket-gateway-service
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+     - ./websocket-gateway-service:/usr/src/app       
+      - /usr/src/app/node_modules     
+    command: yarn start:dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - chat_network
+    restart: unless-stopped
 
   file-service:
     build:
