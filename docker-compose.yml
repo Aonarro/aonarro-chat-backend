@@ -49,11 +49,13 @@ services:
     build:
       context: ./websocket-gateway-service
       dockerfile: Dockerfile
+    ports:
+    - '${WEBSOCKET_GATEWAY_PORT}:8003'
     env_file:
       - .env
     volumes:
      - ./websocket-gateway-service:/usr/src/app       
-      - /usr/src/app/node_modules     
+     - /usr/src/app/node_modules     
     command: yarn start:dev
     depends_on:
       postgres:
@@ -94,7 +96,49 @@ services:
     env_file:
       - .env
     volumes:
-      - ./notification-service:/usr/src/app       # Монтируем весь проект
+      - ./notification-service:/usr/src/app       
+      - /usr/src/app/node_modules   
+    command: yarn start:dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - chat_network
+    restart: unless-stopped
+  
+  chat-service:
+    build:
+      context: ./chat-service
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./chat-service:/usr/src/app      
+      - /usr/src/app/node_modules   
+    command: yarn start:dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - chat_network
+    restart: unless-stopped
+
+  message-service:
+    build:
+      context: ./message-service
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./message-service:/usr/src/app      
       - /usr/src/app/node_modules   
     command: yarn start:dev
     depends_on:
@@ -194,6 +238,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  redis-ui:
+    container_name: redis-ui
+    image: redis/redisinsight:latest
+    ports:
+      - '5540:5540'
+    depends_on:
+      - redis
+    networks:
+      - chat_network
 
 volumes:
   postgres_data:

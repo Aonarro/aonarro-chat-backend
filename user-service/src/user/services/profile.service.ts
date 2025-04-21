@@ -77,16 +77,23 @@ export class ProfileService {
     }
   }
 
-  async getProfile(userId: string): Promise<ProfileResponse> {
-    this.logger.log(`Fetching profile for userId: ${userId}`);
+  async getProfile(
+    userId?: string,
+    username?: string,
+  ): Promise<ProfileResponse> {
+    if (!userId && !username) {
+      throw new Error('Either userId or username must be provided');
+    }
+    const whereCondition = username ? { username } : { userId };
+
+    this.logger.log(
+      `Fetching profile for ${username ? 'username: ' + username : 'userId: ' + userId}`,
+    );
     const profile = await this.prismaService.profile.findUnique({
-      where: {
-        userId: userId,
-      },
+      where: whereCondition,
       omit: {
         updatedAt: true,
         settingsId: true,
-        userId: true,
       },
       include: {
         settings: {

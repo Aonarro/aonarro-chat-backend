@@ -1,3 +1,7 @@
 node_modules/
 .env
 .idea
+
+# Ignore Prisma generated and migration folders across all services
+**/prisma/migrations/
+**/prisma/__generated__/

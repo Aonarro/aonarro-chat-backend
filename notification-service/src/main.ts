@@ -3,11 +3,12 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
-import { WinstonModule } from 'nest-winston';
-import { winstonLogger } from './config/logger';
+import { logger } from './config/logger/logger';
 
 async function bootstrap() {
-  const appContext = await NestFactory.createApplicationContext(AppModule);
+  const appContext = await NestFactory.createApplicationContext(AppModule, {
+    logger: logger,
+  });
   const configService = appContext.get(ConfigService);
 
   const app = await NestFactory.createMicroservice(AppModule, {
@@ -18,9 +19,7 @@ async function bootstrap() {
       ],
       queue: 'notifications_queue',
     },
-    logger: WinstonModule.createLogger({
-      transports: winstonLogger,
-    }),
+    logger: logger,
   });
 
   await app.listen();

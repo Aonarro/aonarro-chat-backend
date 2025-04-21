@@ -1,11 +1,14 @@
 import { NestFactory } from '@nestjs/core';
-import { FileModule } from './file.module';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { FileModule } from './file/file.module';
+import { logger } from './config/logger/logger';
 
 async function bootstrap() {
-  const appContext = await NestFactory.createApplicationContext(FileModule);
+  const appContext = await NestFactory.createApplicationContext(FileModule, {
+    logger: logger,
+  });
   const configService = appContext.get(ConfigService);
 
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
@@ -18,6 +21,7 @@ async function bootstrap() {
         ],
         queue: 'file_queue',
       },
+      logger: logger,
     },
   );
 

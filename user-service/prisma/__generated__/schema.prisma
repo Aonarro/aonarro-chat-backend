@@ -59,7 +59,7 @@ model FriendRequest {
   status     String   @default("PENDING")
   createdAt  DateTime @default(now())
 
-  @@map("friend_request")
+  @@map("friend_requests")
   @@schema("user")
 }
 
@@ -71,7 +71,7 @@ model Friendship {
   user2Id   String
   createdAt DateTime @default(now())
 
-  @@map("friend")
+  @@map("friends")
   @@schema("user")
 }
 
