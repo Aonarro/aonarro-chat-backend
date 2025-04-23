@@ -15,6 +15,7 @@ import { RpcException } from '@nestjs/microservices';
 @Injectable()
 export class ProfileService {
   private readonly logger = new Logger(ProfileService.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly authService: AuthService,
@@ -24,7 +25,7 @@ export class ProfileService {
 
   async lastLoginAt(data) {
     this.logger.log(`Updating last login at for userId: ${data.userId}`);
-    return await this.prismaService.profile.update({
+    return this.prismaService.profile.update({
       where: { userId: data.userId },
       data: {
         lastLoginAt: new Date(data.loginTime),
@@ -264,5 +265,85 @@ export class ProfileService {
     }
 
     return { message: 'Profile updated successfully' };
+  }
+
+  async findUsersByIds(userIds: string[]) {
+    return this.prismaService.profile.findMany({
+      where: {
+        userId: {
+          in: userIds,
+        },
+      },
+      select: {
+        id: true,
+        userId: true,
+        username: true,
+        avatarUrl: true,
+      },
+    });
+  }
+
+  async areUsersFriends(
+    currentUserId: string,
+    otherUserId: string,
+  ): Promise<boolean> {
+    try {
+      // Проверка на одинаковые ID
+      if (currentUserId === otherUserId) {
+        this.logger.warn(
+          `[Friendship Check] Attempted to check friendship with self`,
+          {
+            action: 'check_friendship',
+            currentUserId,
+            otherUserId,
+          },
+        );
+        return false;
+      }
+
+      const friendship = await this.prismaService.friendship.findFirst({
+        where: {
+          OR: [
+            {
+              AND: [
+                { user1: { userId: currentUserId } },
+                { user2: { userId: otherUserId } },
+              ],
+            },
+            {
+              AND: [
+                { user1: { userId: otherUserId } },
+                { user2: { userId: currentUserId } },
+              ],
+            },
+          ],
+        },
+      });
+
+      this.logger.log(`[Friendship Check] Verified friendship status`, {
+        action: 'check_friendship',
+        currentUserId,
+        otherUserId,
+        areFriends: !!friendship,
+      });
+
+      return !!friendship;
+    } catch (error) {
+      this.logger.error(
+        `[Friendship Check] Failed to verify friendship status`,
+        {
+          action: 'check_friendship',
+          currentUserId,
+          otherUserId,
+          errorType: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack,
+        },
+      );
+      throw new RpcException({
+        message: 'Failed to verify friendship status',
+        code: 'FRIENDSHIP_CHECK_FAILED',
+      });
+    }
   }
 }

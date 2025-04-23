@@ -6,6 +6,7 @@ import { ChatController } from './controller/chat.controller';
 import { UserService } from './service/user.service';
 import { PrismaModule } from 'src/config/prisma/prisma.module';
 import { RabbitMQModule } from 'src/config/rabbitmq/rabbitmq.module';
+import { PresenceService } from './service/presence.service';
 
 @Module({
   imports: [
@@ -17,6 +18,6 @@ import { RabbitMQModule } from 'src/config/rabbitmq/rabbitmq.module';
     RabbitMQModule,
   ],
   controllers: [ChatController],
-  providers: [ChatService, UserService],
+  providers: [ChatService, UserService, PresenceService],
 })
 export class ChatModule {}

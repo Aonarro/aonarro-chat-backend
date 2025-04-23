@@ -17,6 +17,7 @@ import { FriendController } from './controllers/friend.controller';
 import { ElasticSearchModule } from 'src/config/elastic-search/elastic-search.module';
 import { ElasticSearchService } from './services/elastic-search.service';
 import { UtilityFunctions } from 'src/utils/functions/UtilityFunctions';
+import { ChatController } from './controllers/chat.controller';
 
 @Module({
   imports: [
@@ -33,7 +34,12 @@ import { UtilityFunctions } from 'src/utils/functions/UtilityFunctions';
     }),
     ElasticSearchModule,
   ],
-  controllers: [ProfileController, UserController, FriendController],
+  controllers: [
+    ProfileController,
+    UserController,
+    FriendController,
+    ChatController,
+  ],
   providers: [
     SessionAuthGuard,
     ProfileService,

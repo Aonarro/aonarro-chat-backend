@@ -6,7 +6,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
   imports: [
     ClientsModule.registerAsync([
       {
-        name: 'USER_SERVICE',
+        name: 'CHAT_SERVICE',
         imports: [ConfigModule],
         useFactory: async (configService: ConfigService) => ({
           transport: Transport.RMQ,
@@ -14,7 +14,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
             urls: [
               `amqp://${configService.getOrThrow('RABBITMQ_HOST')}:${configService.getOrThrow('RABBITMQ_PORT')}`,
             ],
-            queue: 'user_queue',
+            queue: 'chat_queue',
           },
         }),
         inject: [ConfigService],

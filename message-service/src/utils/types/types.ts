@@ -1,5 +1,5 @@
 export interface CreateMessageDto {
-  userId: string;
+  chatId: string;
   content: string;
   senderId: string;
 }

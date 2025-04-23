@@ -9,3 +9,8 @@ export interface ValidationErrorResponse {
   errors: string[];
   originalData: CreateMessageDto;
 }
+
+export enum UserStatusEnum {
+  ONLINE = 'online',
+  OFFLINE = 'offline',
+}

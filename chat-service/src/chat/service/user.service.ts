@@ -39,4 +39,41 @@ export class UserService {
       });
     }
   }
+
+  async areUsersFriends(currentUserId: string, friendUserId: string) {
+    try {
+      const response = await firstValueFrom(
+        this.userClient
+          .send('verify_users_friends', { currentUserId, friendUserId })
+          .pipe(
+            timeout(5000),
+            catchError((error) => {
+              this.logger.error(
+                `Friendship verification failed for users ${currentUserId} and ${friendUserId}`,
+                error,
+              );
+              throw new RpcException({
+                message: 'User service unavailable',
+                code: 'USER_SERVICE_ERROR',
+              });
+            }),
+          ),
+      );
+
+      if (!response?.success) {
+        return false;
+      }
+
+      return response.areFriends;
+    } catch (error) {
+      this.logger.error(
+        `Failed to verify friendship for users ${currentUserId} and ${friendUserId}`,
+        error.stack,
+      );
+      throw new RpcException({
+        message: error.message,
+        code: error.code || 'FRIENDSHIP_VERIFICATION_ERROR',
+      });
+    }
+  }
 }
