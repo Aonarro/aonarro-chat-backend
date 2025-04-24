@@ -2,6 +2,7 @@ import { Controller, Logger } from '@nestjs/common';
 import { ChatService } from '../service/chat.service';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { UserService } from '../service/user.service';
+import { PresenceService } from '../service/presence.service';
 
 @Controller()
 export class ChatController {
@@ -10,6 +11,7 @@ export class ChatController {
   constructor(
     private readonly chatService: ChatService,
     private readonly userService: UserService,
+    private readonly presenceService: PresenceService,
   ) {}
 
   @MessagePattern('create_or_get_chat')
@@ -60,6 +62,9 @@ export class ChatController {
         );
       }
 
+      const friendStatus =
+        await this.presenceService.getUserStatus(friendUserId);
+
       const { email: _email, settings, ...cleanFriendProfile } = friendProfile;
       const { isTwoFactorEnabled: _isTwoFactorEnabled, ...cleanSettings } =
         settings;
@@ -73,6 +78,7 @@ export class ChatController {
         participantProfile: {
           ...cleanFriendProfile,
           settings: cleanSettings,
+          status: friendStatus,
         },
       };
 

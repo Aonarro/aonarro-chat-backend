@@ -137,22 +137,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: SocketWithUserId,
     @MessageBody() data: { status: UserStatusEnum },
   ) {
-    this.logger.log(
-      `Processing status change request - User ID: ${client.userId}, New Status: ${data.status}`,
-    );
+    // this.logger.log(
+    //   `Processing status change request - User ID: ${client.userId}, New Status: ${data.status}`,
+    // );
     try {
       await this.presenceService.setUserStatus(client.userId, data.status);
-      this.logger.log(
-        `Status successfully updated - User ID: ${client.userId}, Status: ${data.status}`,
-      );
+      // this.logger.log(
+      //   `Status successfully updated - User ID: ${client.userId}, Status: ${data.status}`,
+      // );
 
       this.server.emit('user_status_updated', {
         userId: client.userId,
         status: data.status,
       });
-      this.logger.log(
-        `Status update notification sent - User ID: ${client.userId}`,
-      );
+      // this.logger.log(
+      //   `Status update notification sent - User ID: ${client.userId}`,
+      // );
     } catch (error) {
       this.logger.error(
         `Failed to update user status - User ID: ${client.userId}`,
@@ -170,19 +170,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!data.username || !data.requestId) {
       throw new WsException('Invalid request data');
     }
-    this.logger.log(
-      `Initiating chat creation/retrieval - Initiator: ${client.userId}, Target User: ${data.username}`,
-    );
+    // this.logger.log(
+    //   `Initiating chat creation/retrieval - Initiator: ${client.userId}, Target User: ${data.username}`,
+    // );
 
     try {
-      this.logger.debug(
-        `Checking chatClient connection status: ${this.chatClient['connected']}`,
-      );
+      // this.logger.debug(
+      //   `Checking chatClient connection status: ${this.chatClient['connected']}`,
+      // );
 
       const currentUserId = client.userId;
-      this.logger.debug(
-        `Sending request to chat service - Initiator: ${currentUserId}, Target: ${data.username}`,
-      );
+      // this.logger.debug(
+      //   `Sending request to chat service - Initiator: ${currentUserId}, Target: ${data.username}`,
+      // );
 
       const chat = await firstValueFrom(
         this.chatClient
@@ -202,12 +202,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ),
       );
 
-      this.logger.log(
-        `Chat successfully processed - Chat ID: ${chat.id}, Initiator: ${currentUserId}`,
-      );
+      // this.logger.log(
+      //   `Chat successfully processed - Chat ID: ${chat.id}, Initiator: ${currentUserId}`,
+      // );
       setTimeout(() => {
         client.emit('chat_ready', { chat: chat, requestId: data.requestId });
-      }, 3000);
+      }, 1000);
     } catch (error) {
       this.logger.error(
         `Chat operation failed - Initiator: ${client.userId}`,
@@ -224,13 +224,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('get_all_chats')
   async getAllChats(@ConnectedSocket() client: SocketWithUserId) {
-    this.logger.log(
-      `Fetching all chats request received - User ID: ${client.userId}`,
-    );
+    // this.logger.log(
+    //   `Fetching all chats request received - User ID: ${client.userId}`,
+    // );
 
     try {
       const userId = client.userId;
-      this.logger.debug(`Querying chats for user - User ID: ${userId}`);
+      // this.logger.debug(`Querying chats for user - User ID: ${userId}`);
 
       const chats = await firstValueFrom(
         this.chatClient.send('get_all_chats', { userId }).pipe(
@@ -245,9 +245,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ),
       );
 
-      this.logger.log(
-        `Successfully retrieved ${chats.length} chats for User ID: ${userId}`,
-      );
+      // this.logger.log(
+      //   `Successfully retrieved ${chats.length} chats for User ID: ${userId}`,
+      // );
       client.emit('chats_list', chats);
     } catch (error) {
       this.logger.error(
@@ -280,7 +280,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: SocketWithUserId,
   ) {
     const { chatId } = data;
-    this.logger.debug(
+    this.logger.warn(
       `Leave room request - User ID: ${client.userId}, Chat ID: ${chatId}`,
     );
 

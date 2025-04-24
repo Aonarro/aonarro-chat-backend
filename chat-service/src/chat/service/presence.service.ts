@@ -1,6 +1,7 @@
 // presence.service.ts
 import { Injectable } from '@nestjs/common';
 import { RedisService } from 'src/config/redis/redis.service';
+import { UserStatusEnum } from '../../utils/types/types';
 
 @Injectable()
 export class PresenceService {
@@ -19,5 +20,10 @@ export class PresenceService {
     });
 
     return map;
+  }
+
+  async getUserStatus(userId: string): Promise<UserStatusEnum | null> {
+    const status = await this.redisService.get(`user:${userId}`);
+    return status ? (status as UserStatusEnum) : null;
   }
 }
