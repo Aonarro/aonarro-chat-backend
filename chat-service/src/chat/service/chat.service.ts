@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { Chat } from 'prisma/__generated__';
 import { catchError, firstValueFrom, timeout } from 'rxjs';
 import { PrismaService } from 'src/config/prisma/prisma.service';
@@ -137,6 +137,8 @@ export class ChatService {
           ? {
               id: lastMessage.id,
               content: lastMessage.content,
+              senderId: lastMessage.senderId,
+              createdAt: lastMessage.createdAt,
             }
           : null,
         participant: participantUser
@@ -155,15 +157,52 @@ export class ChatService {
     });
   }
 
-  async getLastMessageById(messageId: string) {
-    return await firstValueFrom(
-      this.messageClient.send('get_message_by_id', { messageId }).pipe(
-        timeout(5000),
-        catchError((error) => {
-          this.logger.error('Failed to fetch last message', error);
-          throw new Error('Message Service unavailable');
-        }),
-      ),
-    );
+  async verifyChatAccess(chatId: string, userId: string): Promise<boolean> {
+    try {
+      const participant = await this.prismaService.participant.findUnique({
+        where: {
+          chatId_userId: {
+            chatId,
+            userId,
+          },
+        },
+      });
+
+      if (!participant) {
+        this.logger.warn(
+          `Доступ запрещен: пользователь ${userId} не является участником чата ${chatId}`,
+        );
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Ошибка при проверке доступа к чату ${chatId} для пользователя ${userId}: ${error.message}`,
+      );
+      throw new RpcException('Ошибка при проверке доступа к чату');
+    }
+  }
+
+  async changeChatLastMessage(
+    chatId: string,
+    messageId: string,
+  ): Promise<void> {
+    try {
+      await this.prismaService.chat.update({
+        where: {
+          id: chatId,
+        },
+        data: {
+          lastMessageId: messageId,
+        },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Ошибка при обновлении последнего сообщения чата ${chatId}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
   }
 }

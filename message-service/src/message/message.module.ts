@@ -5,6 +5,8 @@ import { RabbitMQModule } from 'src/config/rabbitmq/rabbitmq.module';
 import { RedisModule } from 'src/config/redis/redis.module';
 import { MessageController } from './controller/message.controller';
 import { MessageService } from './service/message.service';
+import { ChatService } from './service/chat.service';
+import { UserService } from './service/user.service';
 
 @Module({
   imports: [
@@ -16,6 +18,6 @@ import { MessageService } from './service/message.service';
     RabbitMQModule,
   ],
   controllers: [MessageController],
-  providers: [MessageService],
+  providers: [MessageService, ChatService, UserService],
 })
 export class MessageModule {}

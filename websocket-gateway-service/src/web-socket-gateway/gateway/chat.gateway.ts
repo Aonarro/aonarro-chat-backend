@@ -25,6 +25,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { catchError, firstValueFrom, timeout } from 'rxjs';
 import { WsValidationFilter } from 'src/utils/filters/ws-validation.filter';
 import { WsRpcExceptionFilter } from '../../utils/filters/ws-exception.filter';
+import { CreateMessageDto } from '../dto/create-message.dto';
 
 @WebSocketGateway({
   namespace: '/chat-ws',
@@ -35,6 +36,8 @@ import { WsRpcExceptionFilter } from '../../utils/filters/ws-exception.filter';
   },
   transports: ['websocket', 'polling'],
   allowEIO3: true,
+  pingInterval: 10000, // Интервал отправки ping (10 секунд)
+  pingTimeout: 5000, // Время ожидания pong (5 секунд)
 })
 @UseFilters(WsValidationFilter, WsRpcExceptionFilter)
 @UsePipes(
@@ -82,7 +85,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `New connection established - User ID: ${userId}, Socket ID: ${client.id}`,
       );
       client.emit('connection_success', { status: 'connected' });
-      await this.presenceService.setUserStatus(userId, UserStatusEnum.ONLINE);
+
+      await this.presenceService.addUserSocket(userId, client.id);
       this.logger.log(`User status updated to ONLINE - User ID: ${userId}`);
 
       this.userClient.emit('user_last_login', {
@@ -90,10 +94,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         loginTime: new Date().toISOString(),
       });
       this.logger.log(`Last login time recorded - User ID: ${userId}`);
-      this.server.emit('user_status_updated', {
-        userId: client.userId,
-        status: UserStatusEnum.ONLINE,
-      });
+      // this.server.emit('user_status_updated', {
+      //   userId: client.userId,
+      //   status: UserStatusEnum.ONLINE,
+      // });
     } catch (error) {
       this.logger.error(
         `Authentication failed - Socket ID: ${client.id}`,
@@ -109,21 +113,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     try {
-      await this.presenceService.setUserStatus(
-        client.userId,
-        UserStatusEnum.OFFLINE,
-      );
-      this.logger.log(
-        `User status updated to OFFLINE - User ID: ${client.userId}`,
-      );
+      await this.presenceService.removeUserSocket(client.userId, client.id);
 
-      this.server.emit('user_status_updated', {
-        userId: client.userId,
-        status: UserStatusEnum.OFFLINE,
-      });
-      this.logger.log(
-        `Status update broadcasted for User ID: ${client.userId}`,
-      );
+      const isOnline = await this.presenceService.isUserOnline(client.userId);
+
+      if (!isOnline) {
+        this.logger.log(
+          `User status updated to OFFLINE - User ID: ${client.userId}`,
+        );
+        this.server.emit('user_status_updated', {
+          userId: client.userId,
+          status: UserStatusEnum.OFFLINE,
+        });
+        this.logger.log(
+          `Status update broadcasted for User ID: ${client.userId}`,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `Failed to handle disconnect properly - User ID: ${client.userId}`,
@@ -137,22 +142,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: SocketWithUserId,
     @MessageBody() data: { status: UserStatusEnum },
   ) {
-    // this.logger.log(
-    //   `Processing status change request - User ID: ${client.userId}, New Status: ${data.status}`,
-    // );
+    this.logger.log(
+      `Processing status change request - User ID: ${client.userId}, New Status: ${data.status}`,
+    );
     try {
-      await this.presenceService.setUserStatus(client.userId, data.status);
       // this.logger.log(
       //   `Status successfully updated - User ID: ${client.userId}, Status: ${data.status}`,
       // );
+
+      if (data.status === UserStatusEnum.OFFLINE) {
+        await this.presenceService.setUserStatusOffline(
+          client.userId,
+          UserStatusEnum.OFFLINE,
+        );
+      } else {
+        await this.presenceService.refreshUserTTL(client.userId, client.id); // ← передаём socketId сюда
+      }
 
       this.server.emit('user_status_updated', {
         userId: client.userId,
         status: data.status,
       });
-      // this.logger.log(
-      //   `Status update notification sent - User ID: ${client.userId}`,
-      // );
+      this.logger.log(
+        `Status update notification sent - User ID: ${client.userId}`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to update user status - User ID: ${client.userId}`,
@@ -254,24 +267,93 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `Failed to fetch chats - User ID: ${client.userId}`,
         error.stack,
       );
+
+      if (error instanceof WsException) {
+        throw error;
+      }
+
       throw new WsException('Failed to fetch chats');
     }
   }
 
   @SubscribeMessage('join_room')
-  handleJoinRoom(
+  async handleJoinRoom(
     @ConnectedSocket() client: SocketWithUserId,
     @MessageBody() data: { chatId: string },
   ) {
     const { chatId } = data;
-    this.logger.debug(
-      `Join room request - User ID: ${client.userId}, Chat ID: ${chatId}`,
-    );
 
-    client.join(chatId);
-    this.logger.log(
-      `User successfully joined room - User ID: ${client.userId}, Chat ID: ${chatId}`,
-    );
+    try {
+      if (!chatId) {
+        throw new WsException('ID чата не указан');
+      }
+
+      console.log('JOIN ROOM');
+      await client.join(chatId);
+    } catch (error) {
+      this.logger.error(`Ошибка при входе в чат: ${error.message}`);
+      throw new WsException(error.message || 'Ошибка при входе в чат');
+    }
+  }
+
+  // Отдельный обработчик для загрузки сообщений
+  @SubscribeMessage('load_chat_messages')
+  async handleLoadChatMessages(
+    @ConnectedSocket() client: SocketWithUserId,
+    @MessageBody()
+    data: {
+      chatId: string;
+      limit?: number;
+      offset?: number;
+    },
+  ) {
+    const { chatId, limit = 50, offset = 0 } = data;
+
+    try {
+      console.log('fetch message все', data);
+
+      const messagesData = await firstValueFrom(
+        this.messageClient
+          .send('get_chat_messages', {
+            chatId,
+            userId: client.userId,
+            limit,
+            offset,
+          })
+          .pipe(
+            timeout(10000),
+            catchError((error) => {
+              this.logger.error(
+                `RabbitMQ communication failure - User ID: ${client.userId}`,
+                error.stack,
+              );
+              throw new WsException('Chat service unavailable');
+            }),
+          ),
+      );
+
+      // Отправляем сообщения в комнату
+      setTimeout(() => {
+        this.server.to(chatId).emit('chat_messages_loaded', {
+          chatId,
+          messages: messagesData.messages,
+          total: messagesData.total,
+          hasMore: messagesData.hasMore,
+        });
+      }, 2000);
+    } catch (error) {
+      this.logger.error(
+        `Ошибка при загрузке сообщений чата: ${error.message}`,
+        error.stack,
+      );
+
+      client.emit('chat_error', {
+        chatId,
+        error: error.message || 'Ошибка при загрузке сообщений',
+      });
+
+      throw new WsException(error.message || 'Ошибка при загрузке сообщений');
+    }
   }
 
   @SubscribeMessage('leave_room')
@@ -288,5 +370,52 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(
       `User left room - User ID: ${client.userId}, Chat ID: ${chatId}`,
     );
+  }
+
+  @SubscribeMessage('send_message')
+  async handleSendMessage(
+    @ConnectedSocket() client: SocketWithUserId,
+    @MessageBody() data: CreateMessageDto,
+  ) {
+    const { chatId, content } = data;
+    this.logger.warn('new message', content);
+
+    try {
+      const messagePayload = {
+        chatId,
+        senderId: client.userId,
+        content,
+      };
+
+      const createdMessage = await firstValueFrom(
+        this.messageClient.send('create_message', messagePayload).pipe(
+          timeout(10000),
+          catchError((error) => {
+            this.logger.error(
+              `RabbitMQ error while sending message - User ID: ${client.userId}`,
+              error.stack,
+            );
+            throw error;
+          }),
+        ),
+      );
+
+      this.server.to(chatId).emit('new_message', createdMessage);
+
+      this.logger.debug(
+        `Message sent successfully - Chat ID: ${chatId}, User ID: ${client.userId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send message - User ID: ${client.userId}`,
+        error.stack,
+      );
+
+      if (error instanceof WsException) {
+        throw error;
+      }
+
+      throw new WsException(error.message || 'Failed to send message');
+    }
   }
 }
