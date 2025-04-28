@@ -39,6 +39,9 @@ export class MessageService {
           content: createMessageData.content,
           chatId: createMessageData.chatId,
           senderId: createMessageData.senderId,
+          readBy: {
+            set: [createMessageData.senderId],
+          },
         },
         select: {
           id: true,
@@ -48,6 +51,7 @@ export class MessageService {
           readBy: true,
           edited: true,
           deletedForEveryone: true,
+          chatId: true,
         },
       });
     } catch (error) {
@@ -136,6 +140,76 @@ export class MessageService {
         `Ошибка при получении сообщений чата: ${error.message}`,
       );
       throw new RpcException('Ошибка при получении сообщений');
+    }
+  }
+
+  async markMessagesAsRead(
+    messageIds: string[],
+    userId: string,
+    chatId: string,
+  ) {
+    console.log('Starting markMessagesAsRead with:', {
+      messageIds,
+      userId,
+      chatId,
+    });
+
+    try {
+      const messages = await this.prismaService.message.findMany({
+        where: {
+          id: { in: messageIds },
+          chatId: chatId,
+        },
+        select: {
+          id: true,
+          readBy: true,
+          chatId: true,
+        },
+      });
+
+      console.log('Found messages:', messages);
+
+      if (!messages.length) {
+        console.log('No messages found for update');
+        return [];
+      }
+
+      // this.logger.debug('Found messages:', messages);
+
+      const updatePromises = messages.map((message) => {
+        const uniqueReadBy = new Set([...(message.readBy || []), userId]);
+        const readByArray = Array.from(uniqueReadBy);
+
+        // console.log(`Preparing update for message ${message.id}:`, {
+        //   currentReadBy: message.readBy,
+        //   newReadBy: readByArray,
+        // });
+
+        return this.prismaService.message.update({
+          where: {
+            id: message.id,
+            chatId: chatId,
+          },
+          data: {
+            readBy: {
+              set: readByArray,
+            },
+          },
+          select: {
+            id: true,
+            readBy: true,
+            chatId: true,
+          },
+        });
+      });
+
+      const updatedMessages = await Promise.all(updatePromises);
+      // console.log('Updated messages:', updatedMessages);
+
+      return updatedMessages;
+    } catch (error) {
+      this.logger.error(`Error marking messages as read: ${error.message}`);
+      throw new RpcException('Failed to mark messages as read');
     }
   }
 }

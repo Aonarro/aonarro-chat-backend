@@ -220,7 +220,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // );
       setTimeout(() => {
         client.emit('chat_ready', { chat: chat, requestId: data.requestId });
-      }, 1000);
+      }, 500);
     } catch (error) {
       this.logger.error(
         `Chat operation failed - Initiator: ${client.userId}`,
@@ -305,9 +305,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       chatId: string;
       limit?: number;
       offset?: number;
+      requestMessagesId: string;
     },
   ) {
-    const { chatId, limit = 50, offset = 0 } = data;
+    const { chatId, limit = 50, offset = 0, requestMessagesId } = data;
 
     try {
       console.log('fetch message все', data);
@@ -336,11 +337,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       setTimeout(() => {
         this.server.to(chatId).emit('chat_messages_loaded', {
           chatId,
+          requestMessagesId: requestMessagesId,
           messages: messagesData.messages,
           total: messagesData.total,
           hasMore: messagesData.hasMore,
         });
-      }, 2000);
+      }, 500);
     } catch (error) {
       this.logger.error(
         `Ошибка при загрузке сообщений чата: ${error.message}`,
@@ -401,6 +403,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       this.server.to(chatId).emit('new_message', createdMessage);
+      this.server.emit('new_message_notification', createdMessage);
 
       this.logger.debug(
         `Message sent successfully - Chat ID: ${chatId}, User ID: ${client.userId}`,
@@ -416,6 +419,53 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       throw new WsException(error.message || 'Failed to send message');
+    }
+  }
+
+  @SubscribeMessage('mark_messages_read')
+  async handleMarkMessagesRead(
+    @ConnectedSocket() client: SocketWithUserId,
+    @MessageBody() data: { messageIds: string[]; chatId: string },
+  ) {
+    const { messageIds, chatId } = data;
+
+    try {
+      const markedMessages = await firstValueFrom(
+        this.messageClient
+          .send('mark_messages_as_read', {
+            chatId,
+            messageIds,
+            userId: client.userId,
+          })
+          .pipe(
+            timeout(10000),
+            catchError((error) => {
+              this.logger.error(
+                `Failed to mark messages as read - User ID: ${client.userId}`,
+                error.stack,
+              );
+              throw error;
+            }),
+          ),
+      );
+
+      // Отправляем обновление всем пользователям в чате
+      this.server.to(chatId).emit('messages_marked_read', {
+        chatId,
+        messages: markedMessages,
+        userId: client.userId,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Message read status update failed - User ID: ${client.userId}`,
+        error.stack,
+      );
+
+      if (error instanceof WsException) {
+        throw error;
+      }
+
+      throw new WsException('Failed to update message read status');
     }
   }
 }

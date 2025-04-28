@@ -7,6 +7,7 @@ import {
   Req,
   UseGuards,
   Res,
+  Get,
 } from '@nestjs/common';
 import { RegisterDto } from '../../auth/dto/register.dto';
 import { LoginDto } from '../../auth/dto/login.dto';
@@ -45,6 +46,16 @@ export class AuthController {
       userEmail,
       confirmPasswordDto.password,
     );
+  }
+
+  @Get('current-user-id')
+  @UseGuards(SessionAuthGuard)
+  async getCurrentUserId(@Req() req: Request) {
+    const currentUser = req.user as IUser;
+
+    return {
+      currentUserId: currentUser.id,
+    };
   }
 
   @Post('logout')

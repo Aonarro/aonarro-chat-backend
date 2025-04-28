@@ -38,8 +38,10 @@ export class MessageController {
         message.senderId,
       );
 
+      const { senderId, ...otherFields } = message;
+
       const formattedMessage = {
-        ...message,
+        ...otherFields,
         sender: {
           username: friendProfile.username,
           userId: friendProfile.userId,
@@ -68,14 +70,13 @@ export class MessageController {
 
       await this.chatService.verifyChatAccess(data.chatId, data.userId);
 
-
       const messagesData = await this.messageService.getMessagesByChatId(
         data.chatId,
         data.limit,
         data.offset,
       );
 
-      console.log('MESSAGES DATA31231', messagesData);
+      // console.log('MESSAGES DATA31231', messagesData);
 
       return {
         messages: messagesData.messages,
@@ -97,5 +98,18 @@ export class MessageController {
         code: 'MESSAGES_FETCH_ERROR',
       });
     }
+  }
+
+  @MessagePattern('mark_messages_as_read')
+  async markMessagesAsRead(data: {
+    messageIds: string[];
+    userId: string;
+    chatId: string;
+  }) {
+    return this.messageService.markMessagesAsRead(
+      data.messageIds,
+      data.userId,
+      data.chatId,
+    );
   }
 }
