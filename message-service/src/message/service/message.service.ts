@@ -3,6 +3,7 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { firstValueFrom, timeout } from 'rxjs';
 import { MessageWithSender, UserProfile } from '../../utils/types/types';
+import { UserService } from './user.service';
 
 @Injectable()
 export class MessageService {
@@ -12,6 +13,7 @@ export class MessageService {
     private readonly prismaService: PrismaService,
     @Inject('USER_SERVICE')
     private readonly userClient: ClientProxy,
+    private readonly userService: UserService,
   ) {}
 
   async getMessagesByIds(messageIds: string[]) {
@@ -55,8 +57,8 @@ export class MessageService {
         },
       });
     } catch (error) {
-      this.logger.error(`Ошибка при создании сообщения: ${error.message}`);
-      throw new RpcException('Ошибка при создании сообщения');
+      this.logger.error(`Error while creating message: ${error.message}`);
+      throw new RpcException('Error while creating message');
     }
   }
 
@@ -210,6 +212,178 @@ export class MessageService {
     } catch (error) {
       this.logger.error(`Error marking messages as read: ${error.message}`);
       throw new RpcException('Failed to mark messages as read');
+    }
+  }
+
+  async updateMessage(
+    chatId: string,
+    messageId: string,
+    userId: string,
+    content: string,
+  ) {
+    try {
+      const existingMessage = await this.prismaService.message.findUnique({
+        where: {
+          id: messageId,
+          chatId: chatId,
+          senderId: userId,
+        },
+      });
+
+      if (!existingMessage) {
+        this.logger.warn(
+          `Message with ID ${messageId} not found for user ${userId} in chat ${chatId}`,
+        );
+        throw new RpcException('Message not found');
+      }
+
+      const lastMessage = await this.getLastMessageFromChat(chatId);
+      const senderProfile = await this.userService.getUserProfileById(userId);
+      const isMessageLast = lastMessage?.id === messageId;
+
+      const response = await this.prismaService.message.update({
+        where: {
+          chatId: chatId,
+          id: messageId,
+          senderId: userId,
+        },
+        data: {
+          content: content,
+          edited: true,
+        },
+        select: {
+          id: true,
+          content: true,
+          senderId: true,
+          createdAt: true,
+          readBy: true,
+          edited: true,
+          deletedForEveryone: true,
+          chatId: true,
+        },
+      });
+
+      const { senderId, ...restProperties } = response;
+
+      const formattedMessage = {
+        ...restProperties,
+        sender: {
+          userId: senderProfile.userId,
+          username: senderProfile.username,
+        },
+      };
+
+      return {
+        updatedMessage: formattedMessage,
+        chatId,
+        isMessageLast,
+      };
+    } catch (error) {
+      this.logger.error(`Error while updating message: ${error.message}`);
+      throw new RpcException('Error while updating message');
+    }
+  }
+
+  async deleteMessage(chatId: string, messageId: string, userId: string) {
+    try {
+      const existingMessage = await this.prismaService.message.findUnique({
+        where: {
+          id: messageId,
+          chatId,
+          senderId: userId,
+        },
+      });
+
+      if (!existingMessage) {
+        this.logger.warn(
+          `Message with ID ${messageId} not found for user ${userId} in chat ${chatId}`,
+        );
+        throw new RpcException('Message not found');
+      }
+
+      const lastMessageBeforeDelete = await this.getLastMessageFromChat(chatId);
+      const isMessageLast = lastMessageBeforeDelete?.id === messageId;
+
+      const deletedMessage = await this.prismaService.message.delete({
+        where: {
+          id: messageId,
+        },
+        select: {
+          id: true,
+          senderId: true,
+          createdAt: true,
+          chatId: true,
+        },
+      });
+
+      const newLastMessage = isMessageLast
+        ? await this.getLastMessageFromChat(chatId)
+        : null;
+
+      const { senderId, ...restProperties } = newLastMessage || {};
+
+      const formattedMessage = {
+        ...restProperties,
+        sender: {
+          userId: senderId,
+        },
+      };
+
+      return {
+        deletedMessageId: deletedMessage.id,
+        chatId: deletedMessage.chatId,
+        isMessageLast,
+        lastMessage: isMessageLast ? formattedMessage : null,
+      };
+    } catch (error) {
+      this.logger.error(`Error while deleting message: ${error.message}`);
+      throw new RpcException('Error while deleting message');
+    }
+  }
+
+  async getLastMessageFromChat(chatId: string) {
+    return await this.prismaService.message.findFirst({
+      where: {
+        chatId: chatId,
+        deletedForEveryone: false,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        id: true,
+        content: true,
+        chatId: true,
+        createdAt: true,
+        edited: true,
+        readBy: true,
+        senderId: true,
+      },
+    });
+  }
+
+  async getUnreadMessagesCount(
+    chatId: string,
+    userId: string,
+  ): Promise<number> {
+    try {
+      const unreadMessagesCount = await this.prismaService.message.count({
+        where: {
+          chatId: chatId,
+          NOT: {
+            readBy: {
+              has: userId,
+            },
+          },
+        },
+      });
+
+      return unreadMessagesCount;
+    } catch (error) {
+      this.logger.error(
+        `Error while getting unread messages count: ${error.message}`,
+      );
+      throw new RpcException('Error while getting unread messages count');
     }
   }
 }

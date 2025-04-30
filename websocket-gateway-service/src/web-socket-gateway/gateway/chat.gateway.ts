@@ -449,7 +449,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ),
       );
 
-      // Отправляем обновление всем пользователям в чате
       this.server.to(chatId).emit('messages_marked_read', {
         chatId,
         messages: markedMessages,
@@ -466,6 +465,183 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       throw new WsException('Failed to update message read status');
+    }
+  }
+
+  @SubscribeMessage('edit_message')
+  async handleEditMessage(
+    @ConnectedSocket() client: SocketWithUserId,
+    @MessageBody() data: { messageId: string; chatId: string; content: string },
+  ) {
+    const { chatId, content, messageId } = data;
+
+    try {
+      console.log('update message', data);
+      const response = await firstValueFrom(
+        this.messageClient
+          .send('edit_message', {
+            chatId,
+            messageId,
+            userId: client.userId,
+            content,
+          })
+          .pipe(
+            timeout(10000),
+            catchError((error) => {
+              this.logger.error(
+                `Failed to edit message  User ID: ${client.userId}`,
+                error.stack,
+              );
+              throw error;
+            }),
+          ),
+      );
+
+      const { updatedMessage, isMessageLast } = response;
+
+      this.server.to(chatId).emit('edited_message', updatedMessage);
+      if (isMessageLast) {
+        this.server.emit('new_message_notification', updatedMessage);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Message editing failed - User ID: ${client.userId}`,
+        error.stack,
+      );
+
+      if (error instanceof WsException) {
+        throw error;
+      }
+
+      throw new WsException('Failed to update message');
+    }
+  }
+
+  @SubscribeMessage('delete_message')
+  async handleDeleteMessage(
+    @ConnectedSocket() client: SocketWithUserId,
+    @MessageBody() data: { messageId: string; chatId: string },
+  ) {
+    const { chatId, messageId } = data;
+
+    try {
+      const response = await firstValueFrom(
+        this.messageClient
+          .send('delete_message', {
+            chatId: chatId,
+            messageId,
+            userId: client.userId,
+          })
+          .pipe(
+            timeout(10000),
+            catchError((error) => {
+              this.logger.error(
+                `Failed to delete message - User ID: ${client.userId}`,
+                error.stack,
+              );
+              throw error;
+            }),
+          ),
+      );
+
+      const {
+        deletedMessageId,
+        isMessageLast,
+        lastMessage,
+        chatId: currentChatId,
+      } = response;
+
+      this.server.to(chatId).emit('deleted_message', {
+        messageId: deletedMessageId,
+        chatId: currentChatId,
+      });
+
+      console.log(lastMessage, 'lastMessage');
+
+      if (isMessageLast) {
+        this.server.emit('new_message_notification', lastMessage);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Message deletion failed - User ID: ${client.userId}`,
+        error.stack,
+      );
+
+      if (error instanceof WsException) {
+        throw error;
+      }
+
+      throw new WsException('Failed to delete message');
+    }
+  }
+
+  @SubscribeMessage('get_unread_messages_count')
+  async handleGetUnreadMessagesCount(
+    @ConnectedSocket() client: SocketWithUserId,
+    @MessageBody() data: { chatId: string },
+  ) {
+    const { chatId } = data;
+    try {
+      console.log('start get unread messages count', data);
+      const unreadMessagesCount = await firstValueFrom(
+        this.messageClient
+          .send('get_unread_messages_count', {
+            userId: client.userId,
+            chatId,
+          })
+          .pipe(
+            timeout(10000),
+            catchError((error) => {
+              this.logger.error(
+                `Failed to get unread messages count - User ID: ${client.userId}`,
+                error.stack,
+              );
+              throw error;
+            }),
+          ),
+      );
+
+      client.emit('unread_messages_count', {
+        chatId: chatId,
+        count: unreadMessagesCount,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch unread messages count - User ID: ${client.userId}`,
+        error.stack,
+      );
+
+      if (error instanceof WsException) {
+        throw error;
+      }
+
+      throw new WsException('Failed to fetch unread messages count');
+    }
+  }
+
+  @SubscribeMessage('user_is_typing')
+  async handleUserIsTyping(
+    @ConnectedSocket() client: SocketWithUserId,
+    @MessageBody() data: { isTyping: boolean; chatId: string },
+  ) {
+    const { isTyping, chatId } = data;
+    console.log('typing', data);
+    try {
+      client.to(chatId).emit('user_is_typing', {
+        userId: client.userId,
+        isTyping,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to notify typing status - User ID: ${client.userId}`,
+        error.stack,
+      );
+
+      if (error instanceof WsException) {
+        throw error;
+      }
+
+      throw new WsException('Failed to notify typing status');
     }
   }
 }

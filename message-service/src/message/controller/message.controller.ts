@@ -50,8 +50,15 @@ export class MessageController {
 
       return formattedMessage;
     } catch (error) {
-      this.logger.error(`Ошибка при обработке сообщения: ${error.message}`);
-      throw new RpcException(error.message || 'Ошибка при создании сообщения');
+      this.logger.error(`creating message error: ${error.message}`);
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      throw new RpcException({
+        message: 'create message error',
+        code: 'CREATE_MESSAGE_ERROR',
+      });
     }
   }
 
@@ -76,8 +83,6 @@ export class MessageController {
         data.offset,
       );
 
-      // console.log('MESSAGES DATA31231', messagesData);
-
       return {
         messages: messagesData.messages,
         total: messagesData.total,
@@ -101,15 +106,118 @@ export class MessageController {
   }
 
   @MessagePattern('mark_messages_as_read')
-  async markMessagesAsRead(data: {
-    messageIds: string[];
-    userId: string;
-    chatId: string;
-  }) {
-    return this.messageService.markMessagesAsRead(
-      data.messageIds,
-      data.userId,
-      data.chatId,
-    );
+  async markMessagesAsRead(
+    @Payload() data: { messageIds: string[]; userId: string; chatId: string },
+  ) {
+    try {
+      return this.messageService.markMessagesAsRead(
+        data.messageIds,
+        data.userId,
+        data.chatId,
+      );
+    } catch (error) {
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      throw new RpcException({
+        message: 'mark messages updated error',
+        code: 'MARK_MESSAGES_UPDATED_ERROR',
+      });
+    }
+  }
+
+  @MessagePattern('edit_message')
+  async editMessage(
+    @Payload()
+    data: {
+      messageId: string;
+      userId: string;
+      chatId: string;
+      content: string;
+    },
+  ) {
+    try {
+      const result = await this.messageService.updateMessage(
+        data.chatId,
+        data.messageId,
+        data.userId,
+        data.content,
+      );
+
+      return result;
+    } catch (error) {
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      throw new RpcException({
+        message: 'editing message error',
+        code: 'EDITING_MESSAGE_ERROR',
+      });
+    }
+  }
+
+  @MessagePattern('delete_message')
+  async deleteMessage(
+    @Payload()
+    data: {
+      messageId: string;
+      userId: string;
+      chatId: string;
+    },
+  ) {
+    try {
+      const result = await this.messageService.deleteMessage(
+        data.chatId,
+        data.messageId,
+        data.userId,
+      );
+
+      if (result.isMessageLast) {
+        await this.chatService.changeChatLastMessage(
+          result.lastMessage.id,
+          data.chatId,
+        );
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      throw new RpcException({
+        message: 'deleting message error',
+        code: 'DELETING_MESSAGE_ERROR',
+      });
+    }
+  }
+
+  @MessagePattern('get_unread_messages_count')
+  async getUnreadMessagesCount(
+    @Payload()
+    data: {
+      userId: string;
+      chatId: string;
+    },
+  ) {
+    try {
+      const result = await this.messageService.getUnreadMessagesCount(
+        data.chatId,
+        data.userId,
+      );
+
+      return result;
+    } catch (error) {
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      throw new RpcException({
+        message: 'getting unread messages count error',
+        code: 'GETTING_UNREAD_MESSAGES_COUNT_ERROR',
+      });
+    }
   }
 }
