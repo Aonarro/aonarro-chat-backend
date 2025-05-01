@@ -4,6 +4,7 @@ import { PrismaService } from 'src/config/prisma/prisma.service';
 import { firstValueFrom, timeout } from 'rxjs';
 import { MessageWithSender, UserProfile } from '../../utils/types/types';
 import { UserService } from './user.service';
+import { FileService } from './file.service';
 
 @Injectable()
 export class MessageService {
@@ -13,6 +14,7 @@ export class MessageService {
     private readonly prismaService: PrismaService,
     @Inject('USER_SERVICE')
     private readonly userClient: ClientProxy,
+    private readonly fileService: FileService,
     private readonly userService: UserService,
   ) {}
 
@@ -62,6 +64,51 @@ export class MessageService {
     }
   }
 
+  async createMessageWithFile(createMessageData: {
+    content: string;
+    chatId: string;
+    senderId: string;
+    fileKey: string;
+  }) {
+    try {
+      return await this.prismaService.message.create({
+        data: {
+          content: createMessageData.content,
+          chatId: createMessageData.chatId,
+          senderId: createMessageData.senderId,
+          readBy: {
+            set: [createMessageData.senderId],
+          },
+          attachments: {
+            create: [
+              {
+                fileKey: createMessageData.fileKey,
+              },
+            ],
+          },
+        },
+        select: {
+          id: true,
+          content: true,
+          senderId: true,
+          createdAt: true,
+          readBy: true,
+          edited: true,
+          deletedForEveryone: true,
+          chatId: true,
+          attachments: {
+            select: {
+              fileKey: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Error while creating message: ${error.message}`);
+      throw new RpcException('Error while creating message');
+    }
+  }
+
   async getMessagesByChatId(chatId: string, limit = 50, offset = 0) {
     try {
       const messages = await this.prismaService.message.findMany({
@@ -76,6 +123,7 @@ export class MessageService {
           senderId: true,
           readBy: true,
           deletedForEveryone: true,
+          attachments: true,
         },
         orderBy: {
           createdAt: 'desc',
@@ -116,6 +164,22 @@ export class MessageService {
         senderProfiles.map((profile) => [profile.userId, profile]),
       );
 
+      const fileKeys = messages.flatMap(
+        (message) => message.attachments?.map((att) => att.fileKey) || [],
+      );
+
+      let fileUrls: { [key: string]: string } = {};
+
+      if (fileKeys.length > 0) {
+        const fileUrlsResponse = await this.fileService.getFileUrls(fileKeys);
+        console.log('File URLs Response:', fileUrlsResponse);
+
+        fileUrls = fileKeys.reduce((acc, key, index) => {
+          acc[key] = fileUrlsResponse[index];
+          return acc;
+        }, {});
+      }
+
       const formattedMessages: MessageWithSender[] = messages.map(
         (message) => ({
           id: message.id,
@@ -129,6 +193,10 @@ export class MessageService {
             username:
               profilesMap.get(message.senderId)?.username || 'Unknown User',
           },
+          attachments: message.attachments?.map((attachment) => ({
+            fileKey: attachment.fileKey,
+            url: fileUrls[attachment.fileKey],
+          })),
         }),
       );
 

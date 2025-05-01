@@ -19,9 +19,21 @@ model Message {
   updatedAt          DateTime @updatedAt
   deletedForEveryone Boolean  @default(false)
   edited             Boolean  @default(false)
+  attachments MessageAttachment[]
 
   readBy String[] @default([])
 
   @@map("messages")
+  @@schema("message")
+}
+
+model MessageAttachment {
+  id        String   @id @default(uuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileKey   String  
+  createdAt DateTime @default(now())
+
+  @@map("message_attachments")
   @@schema("message")
 }

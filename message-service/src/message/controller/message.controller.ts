@@ -4,6 +4,7 @@ import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { ChatService } from '../service/chat.service';
 import { UserService } from '../service/user.service';
 import { MessagesResponse } from '../../utils/types/types';
+import { FileService } from '../service/file.service';
 
 @Controller()
 export class MessageController {
@@ -13,6 +14,7 @@ export class MessageController {
     private readonly messageService: MessageService,
     private readonly chatService: ChatService,
     private readonly userService: UserService,
+    private readonly fileService: FileService,
   ) {}
 
   @MessagePattern('get_messages_by_ids')
@@ -34,7 +36,7 @@ export class MessageController {
 
       await this.chatService.changeChatLastMessage(message.id, data.chatId);
 
-      const friendProfile = await this.userService.getUserProfileById(
+      const myProfile = await this.userService.getUserProfileById(
         message.senderId,
       );
 
@@ -43,9 +45,83 @@ export class MessageController {
       const formattedMessage = {
         ...otherFields,
         sender: {
-          username: friendProfile.username,
-          userId: friendProfile.userId,
+          username: myProfile.username,
+          userId: myProfile.userId,
         },
+      };
+
+      return formattedMessage;
+    } catch (error) {
+      this.logger.error(`creating message error: ${error.message}`);
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      throw new RpcException({
+        message: 'create message error',
+        code: 'CREATE_MESSAGE_ERROR',
+      });
+    }
+  }
+
+  @MessagePattern('create_message_with_file')
+  async createMessageWithFile(
+    @Payload()
+    data: {
+      chatId: string;
+      senderId: string;
+      content: string;
+      file: {
+        name: string;
+        type: string;
+        data: number[];
+      };
+    },
+  ) {
+    const { chatId, senderId, content, file } = data;
+    try {
+      await this.chatService.verifyChatAccess(chatId, senderId);
+
+      const uploadResponse = await this.fileService.uploadMessageFile(
+        {
+          name: file.name,
+          type: file.type,
+          data: file.data,
+        },
+        senderId,
+      );
+
+      console.log(`NEW MESSAGE WITH FILE ${content}`, uploadResponse);
+
+      const messageWithFile = await this.messageService.createMessageWithFile({
+        content,
+        chatId,
+        senderId,
+        fileKey: uploadResponse.key,
+      });
+
+      await this.chatService.changeChatLastMessage(
+        messageWithFile.id,
+        data.chatId,
+      );
+
+      const myProfile = await this.userService.getUserProfileById(
+        messageWithFile.senderId,
+      );
+
+      const { senderId: currentUserId, ...otherFields } = messageWithFile;
+      const formattedMessage = {
+        ...otherFields,
+        sender: {
+          username: myProfile.username,
+          userId: myProfile.userId,
+        },
+        attachments: [
+          {
+            fileKey: uploadResponse.key,
+            url: uploadResponse.url,
+          },
+        ],
       };
 
       return formattedMessage;

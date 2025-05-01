@@ -26,6 +26,7 @@ import { catchError, firstValueFrom, timeout } from 'rxjs';
 import { WsValidationFilter } from 'src/utils/filters/ws-validation.filter';
 import { WsRpcExceptionFilter } from '../../utils/filters/ws-exception.filter';
 import { CreateMessageDto } from '../dto/create-message.dto';
+import { SendMessageWithFileDto } from '../dto/create-message-with-file.dto';
 
 @WebSocketGateway({
   namespace: '/chat-ws',
@@ -36,8 +37,9 @@ import { CreateMessageDto } from '../dto/create-message.dto';
   },
   transports: ['websocket', 'polling'],
   allowEIO3: true,
-  pingInterval: 10000, // Интервал отправки ping (10 секунд)
-  pingTimeout: 5000, // Время ожидания pong (5 секунд)
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  maxHttpBufferSize: 10e6,
 })
 @UseFilters(WsValidationFilter, WsRpcExceptionFilter)
 @UsePipes(
@@ -417,6 +419,84 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       throw new WsException(error.message || 'Failed to send message');
+    }
+  }
+
+  @SubscribeMessage('send_message_with_file')
+  async handleSendMessageWithFile(
+    @ConnectedSocket() client: SocketWithUserId,
+    @MessageBody() data: SendMessageWithFileDto,
+  ) {
+    const { chatId, content, file } = data;
+    this.logger.warn('new message with file', {
+      chatId,
+      content,
+      hasFile: !!file,
+      file,
+    });
+
+    console.log('new message with file', {
+      chatId,
+      content,
+      hasFile: !!file,
+      file,
+    });
+
+    try {
+      const messagePayload: {
+        chatId: string;
+        senderId: string;
+        content: string;
+        file: {
+          name: string;
+          type: string;
+          data: number[];
+        };
+      } = {
+        chatId,
+        senderId: client.userId,
+        content,
+        file: {
+          name: file.name,
+          type: file.type,
+          data: file.data,
+        },
+      };
+
+      const createdMessage = await firstValueFrom(
+        this.messageClient
+          .send('create_message_with_file', messagePayload)
+          .pipe(
+            timeout(10000),
+            catchError((error) => {
+              this.logger.error(
+                `RabbitMQ error while sending message with file - User ID: ${client.userId}`,
+                error.stack,
+              );
+              throw error;
+            }),
+          ),
+      );
+
+      this.server.to(chatId).emit('new_message', createdMessage);
+      this.server.emit('new_message_notification', createdMessage);
+
+      this.logger.debug(
+        `Message with file sent successfully - Chat ID: ${chatId}, User ID: ${client.userId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send message with file - User ID: ${client.userId}`,
+        error.stack,
+      );
+
+      if (error instanceof WsException) {
+        throw error;
+      }
+
+      throw new WsException(
+        error.message || 'Failed to send message with file',
+      );
     }
   }
 

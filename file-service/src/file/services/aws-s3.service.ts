@@ -8,12 +8,21 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
+import * as path from 'path';
 
 @Injectable()
 export class S3Service {
   private readonly client: S3Client;
   private readonly bucket: string;
   private readonly logger = new Logger(S3Service.name);
+
+  private readonly allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+  private readonly extensionToMimeType: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+  };
 
   constructor(private config: ConfigService) {
     this.bucket = this.config.get('aws.bucket');
@@ -42,12 +51,28 @@ export class S3Service {
 
     this.logger.log(`File path prefix: ${pathPrefix}`);
 
+    const ext = path.extname(params.key).toLowerCase();
+
+    if (!this.allowedExtensions.includes(ext)) {
+      throw new Error(`Unsupported image extension: ${ext}`);
+    }
+
+    const mimeType = this.extensionToMimeType[ext];
+
+    console.log({
+      Bucket: this.bucket,
+      Key: `${pathPrefix}${params.key}`,
+      Body: params.file,
+      Metadata: params.metadata,
+      ContentType: mimeType,
+    });
+
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: `${pathPrefix}${params.key}`,
       Body: params.file,
       Metadata: params.metadata,
-      ContentType: 'image/jpeg',
+      ContentType: mimeType,
     });
 
     try {

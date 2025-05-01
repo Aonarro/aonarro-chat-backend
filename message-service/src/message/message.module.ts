@@ -7,6 +7,7 @@ import { MessageController } from './controller/message.controller';
 import { MessageService } from './service/message.service';
 import { ChatService } from './service/chat.service';
 import { UserService } from './service/user.service';
+import { FileService } from './service/file.service';
 
 @Module({
   imports: [
@@ -18,6 +19,6 @@ import { UserService } from './service/user.service';
     RabbitMQModule,
   ],
   controllers: [MessageController],
-  providers: [MessageService, ChatService, UserService],
+  providers: [MessageService, ChatService, UserService, FileService],
 })
 export class MessageModule {}
