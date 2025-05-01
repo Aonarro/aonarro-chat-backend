@@ -220,7 +220,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // );
       setTimeout(() => {
         client.emit('chat_ready', { chat: chat, requestId: data.requestId });
-      }, 500);
+      }, 250);
     } catch (error) {
       this.logger.error(
         `Chat operation failed - Initiator: ${client.userId}`,
@@ -296,7 +296,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // Отдельный обработчик для загрузки сообщений
   @SubscribeMessage('load_chat_messages')
   async handleLoadChatMessages(
     @ConnectedSocket() client: SocketWithUserId,
@@ -333,7 +332,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ),
       );
 
-      // Отправляем сообщения в комнату
       setTimeout(() => {
         this.server.to(chatId).emit('chat_messages_loaded', {
           chatId,
@@ -342,7 +340,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           total: messagesData.total,
           hasMore: messagesData.hasMore,
         });
-      }, 500);
+      }, 250);
     } catch (error) {
       this.logger.error(
         `Ошибка при загрузке сообщений чата: ${error.message}`,
