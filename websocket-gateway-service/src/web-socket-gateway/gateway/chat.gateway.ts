@@ -148,9 +148,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       `Processing status change request - User ID: ${client.userId}, New Status: ${data.status}`,
     );
     try {
-      // this.logger.log(
-      //   `Status successfully updated - User ID: ${client.userId}, Status: ${data.status}`,
-      // );
+      this.logger.log(
+        `Status successfully updated - User ID: ${client.userId}, Status: ${data.status}`,
+      );
 
       if (data.status === UserStatusEnum.OFFLINE) {
         await this.presenceService.setUserStatusOffline(
@@ -158,7 +158,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           UserStatusEnum.OFFLINE,
         );
       } else {
-        await this.presenceService.refreshUserTTL(client.userId, client.id); // ← передаём socketId сюда
+        await this.presenceService.refreshUserTTL(client.userId, client.id);
       }
 
       this.server.emit('user_status_updated', {
@@ -185,19 +185,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!data.username || !data.requestId) {
       throw new WsException('Invalid request data');
     }
-    // this.logger.log(
-    //   `Initiating chat creation/retrieval - Initiator: ${client.userId}, Target User: ${data.username}`,
-    // );
+    this.logger.log(
+      `Initiating chat creation/retrieval - Initiator: ${client.userId}, Target User: ${data.username}`,
+    );
 
     try {
-      // this.logger.debug(
-      //   `Checking chatClient connection status: ${this.chatClient['connected']}`,
-      // );
+      this.logger.debug(
+        `Checking chatClient connection status: ${this.chatClient['connected']}`,
+      );
 
       const currentUserId = client.userId;
-      // this.logger.debug(
-      //   `Sending request to chat service - Initiator: ${currentUserId}, Target: ${data.username}`,
-      // );
+      this.logger.debug(
+        `Sending request to chat service - Initiator: ${currentUserId}, Target: ${data.username}`,
+      );
 
       const chat = await firstValueFrom(
         this.chatClient
@@ -217,35 +217,32 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ),
       );
 
-      // this.logger.log(
-      //   `Chat successfully processed - Chat ID: ${chat.id}, Initiator: ${currentUserId}`,
-      // );
-      setTimeout(() => {
-        client.emit('chat_ready', { chat: chat, requestId: data.requestId });
-      }, 250);
+      this.logger.log(
+        `Chat successfully processed - Chat ID: ${chat.id}, Initiator: ${currentUserId}`,
+      );
+
+      client.emit('chat_ready', { chat: chat, requestId: data.requestId });
     } catch (error) {
       this.logger.error(
         `Chat operation failed - Initiator: ${client.userId}`,
         error.stack,
       );
-      // Если ошибка уже является WsException, пробрасываем её как есть
       if (error instanceof WsException) {
         throw error;
       }
-      // Если это другой тип ошибки, оборачиваем в WsException
       throw new WsException(error.message || 'Chat operation failed');
     }
   }
 
   @SubscribeMessage('get_all_chats')
   async getAllChats(@ConnectedSocket() client: SocketWithUserId) {
-    // this.logger.log(
-    //   `Fetching all chats request received - User ID: ${client.userId}`,
-    // );
+    this.logger.log(
+      `Fetching all chats request received - User ID: ${client.userId}`,
+    );
 
     try {
       const userId = client.userId;
-      // this.logger.debug(`Querying chats for user - User ID: ${userId}`);
+      this.logger.debug(`Querying chats for user - User ID: ${userId}`);
 
       const chats = await firstValueFrom(
         this.chatClient.send('get_all_chats', { userId }).pipe(
@@ -260,9 +257,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ),
       );
 
-      // this.logger.log(
-      //   `Successfully retrieved ${chats.length} chats for User ID: ${userId}`,
-      // );
+      this.logger.log(
+        `Successfully retrieved ${chats.length} chats for User ID: ${userId}`,
+      );
       client.emit('chats_list', chats);
     } catch (error) {
       this.logger.error(
@@ -287,14 +284,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       if (!chatId) {
-        throw new WsException('ID чата не указан');
+        throw new WsException('Chat ID not specified');
       }
 
       console.log('JOIN ROOM');
       await client.join(chatId);
     } catch (error) {
-      this.logger.error(`Ошибка при входе в чат: ${error.message}`);
-      throw new WsException(error.message || 'Ошибка при входе в чат');
+      this.logger.error(`Error entering chat: ${error.message}`);
+      throw new WsException(error.message || 'Error entering chat');
     }
   }
 
@@ -334,27 +331,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ),
       );
 
-      setTimeout(() => {
-        this.server.to(chatId).emit('chat_messages_loaded', {
-          chatId,
-          requestMessagesId: requestMessagesId,
-          messages: messagesData.messages,
-          total: messagesData.total,
-          hasMore: messagesData.hasMore,
-        });
-      }, 250);
+      this.server.to(chatId).emit('chat_messages_loaded', {
+        chatId,
+        requestMessagesId: requestMessagesId,
+        messages: messagesData.messages,
+        total: messagesData.total,
+        hasMore: messagesData.hasMore,
+      });
     } catch (error) {
       this.logger.error(
-        `Ошибка при загрузке сообщений чата: ${error.message}`,
+        `Error loading chat messages: ${error.message}`,
         error.stack,
       );
 
-      client.emit('chat_error', {
-        chatId,
-        error: error.message || 'Ошибка при загрузке сообщений',
-      });
-
-      throw new WsException(error.message || 'Ошибка при загрузке сообщений');
+      throw new WsException(error.message || 'Error loading chat messages');
     }
   }
 
@@ -451,6 +441,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           name: string;
           type: string;
           data: number[];
+          width: number;
+          height: number;
         };
       } = {
         chatId,
@@ -460,6 +452,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           name: file.name,
           type: file.type,
           data: file.data,
+          width: file.width,
+          height: file.height,
         },
       };
 

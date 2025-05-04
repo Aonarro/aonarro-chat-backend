@@ -288,7 +288,6 @@ export class ProfileService {
     otherUserId: string,
   ): Promise<boolean> {
     try {
-      // Проверка на одинаковые ID
       if (currentUserId === otherUserId) {
         this.logger.warn(
           `[Friendship Check] Attempted to check friendship with self`,

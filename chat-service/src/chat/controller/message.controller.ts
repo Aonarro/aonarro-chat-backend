@@ -23,8 +23,8 @@ export class MessageController {
       const { chatId, senderId } = data;
 
       if (!chatId || !senderId) {
-        this.logger.warn('Получен запрос с отсутствующими параметрами');
-        throw new RpcException('Отсутствуют необходимые параметры');
+        this.logger.warn('Received a request with missing parameters');
+        throw new RpcException('Received a request with missing parameters');
       }
 
       const hasAccess = await this.chatService.verifyChatAccess(
@@ -33,19 +33,19 @@ export class MessageController {
       );
 
       this.logger.debug(
-        `Проверка доступа завершена - User ID: ${senderId}, Chat ID: ${chatId}, Result: ${hasAccess}`,
+        `Access check completed - User ID: ${senderId}, Chat ID: ${chatId}, Result: ${hasAccess}`,
       );
 
       return hasAccess;
     } catch (error) {
       this.logger.error(
-        `Ошибка при проверке доступа к чату: ${error.message}`,
+        `Error checking access to chat: ${error.message}`,
         error.stack,
       );
       throw new RpcException(
         error instanceof RpcException
           ? error.message
-          : 'Ошибка при проверке доступа к чату',
+          : 'Error checking access to chat',
       );
     }
   }
@@ -59,18 +59,16 @@ export class MessageController {
     },
   ) {
     try {
-      this.logger.debug(
-        `Обновление последнего сообщения для чата ${data.chatId}`,
-      );
+      this.logger.debug(`Update last message for chat ${data.chatId}`);
 
       await this.chatService.changeChatLastMessage(data.chatId, data.messageId);
 
       this.logger.debug(
-        `Последнее сообщение успешно обновлено для чата ${data.chatId}`,
+        `Last message successfully updated for chat ${data.chatId}`,
       );
     } catch (error) {
       this.logger.error(
-        `Ошибка при обновлении последнего сообщения чата ${data.chatId}: ${error.message}`,
+        `Error updating last chat message ${data.chatId}: ${error.message}`,
         error.stack,
       );
     }

@@ -11,15 +11,15 @@ datasource db {
 }
 
 model Message {
-  id                 String   @id @default(uuid())
+  id                 String              @id @default(uuid())
   chatId             String
   senderId           String
   content            String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  deletedForEveryone Boolean  @default(false)
-  edited             Boolean  @default(false)
-  attachments MessageAttachment[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deletedForEveryone Boolean             @default(false)
+  edited             Boolean             @default(false)
+  attachments        MessageAttachment[]
 
   readBy String[] @default([])
 
@@ -31,7 +31,9 @@ model MessageAttachment {
   id        String   @id @default(uuid())
   messageId String
   message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  fileKey   String  
+  fileKey   String
+  width     Int?
+  height    Int?
   createdAt DateTime @default(now())
 
   @@map("message_attachments")

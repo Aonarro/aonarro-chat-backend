@@ -8,7 +8,6 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  UsePipes,
 } from '@nestjs/common';
 import { SessionAuthGuard } from '../../utils/guards/session-auth.guard';
 import { RequestWithUserId } from '../../utils/types/types';

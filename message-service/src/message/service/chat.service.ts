@@ -50,15 +50,15 @@ export class ChatService {
           .pipe(
             timeout(5000),
             catchError((error) => {
-              this.logger.error(
-                'Ошибка при отправке уведомления о новом сообщении',
-              );
+              this.logger.error('Error sending new message notification');
               return [];
             }),
           ),
       );
     } catch (error) {
-      this.logger.error(`Ошибка при отправке уведомления: ${error.message}`);
+      this.logger.error(
+        `Error sending new message notification: ${error.message}`,
+      );
     }
   }
 }

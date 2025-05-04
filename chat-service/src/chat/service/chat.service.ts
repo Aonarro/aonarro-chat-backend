@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { Chat } from 'prisma/__generated__';
-import { catchError, firstValueFrom, timeout } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { PresenceService } from './presence.service';
 import { UserStatusEnum } from 'src/utils/types/types';
@@ -170,7 +170,7 @@ export class ChatService {
 
       if (!participant) {
         this.logger.warn(
-          `Доступ запрещен: пользователь ${userId} не является участником чата ${chatId}`,
+          `Access Denied: User ${userId} is not a chat member ${chatId}`,
         );
         return false;
       }
@@ -178,9 +178,9 @@ export class ChatService {
       return true;
     } catch (error) {
       this.logger.error(
-        `Ошибка при проверке доступа к чату ${chatId} для пользователя ${userId}: ${error.message}`,
+        `Error checking access to chat ${chatId} for the user ${userId}: ${error.message}`,
       );
-      throw new RpcException('Ошибка при проверке доступа к чату');
+      throw new RpcException('Error checking access to chat');
     }
   }
 
@@ -199,7 +199,7 @@ export class ChatService {
       });
     } catch (error) {
       this.logger.error(
-        `Ошибка при обновлении последнего сообщения чата ${chatId}: ${error.message}`,
+        `Error updating last chat message ${chatId}: ${error.message}`,
         error.stack,
       );
       throw error;

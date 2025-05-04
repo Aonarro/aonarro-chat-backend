@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
-import { AppModule } from './app.module';
+import { AppModule } from './mail/app.module';
 import { logger } from './config/logger/logger';
 
 async function bootstrap() {

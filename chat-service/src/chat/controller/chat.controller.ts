@@ -35,7 +35,6 @@ export class ChatController {
         throw new RpcException(`User ${username} not found`);
       }
 
-      // Проверка на наличие username
       if (!username) {
         throw new RpcException('Username is required');
       }

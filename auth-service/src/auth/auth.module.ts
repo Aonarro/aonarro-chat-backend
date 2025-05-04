@@ -60,10 +60,10 @@ export class AuthModule implements NestModule {
 
     const redisClient = new IORedis(redisUrl);
     redisClient.on('connect', () => {
-      Logger.log('🔌 Подключение к Redis установлено');
+      Logger.log('Connection to Redis established');
     });
     redisClient.on('error', (err) => {
-      Logger.error('❌ Ошибка подключения к Redis:', err);
+      Logger.error('Redis connection error:', err);
     });
 
     consumer

@@ -31,7 +31,6 @@ export class PresenceService {
     const socketCount = await this.redisService.scard(key);
 
     if (socketCount === 0) {
-      // Нет активных сокетов — ставим OFFLINE
       await this.redisService.del(this.getUserSocketsKey(userId));
       await this.setUserStatusOffline(userId, UserStatusEnum.OFFLINE);
     }
@@ -49,8 +48,6 @@ export class PresenceService {
 
     const userStatusExists = await this.redisService.exists(userStatusKey);
     const userSocketsExists = await this.redisService.exists(userSocketsKey);
-
-
 
     if (!userStatusExists) {
       await this.redisService.set(userStatusKey, UserStatusEnum.ONLINE, 30);

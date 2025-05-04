@@ -12,7 +12,11 @@ export class FileService {
   ) {}
 
   async uploadMessageFile(
-    file: { name: string; type: string; data: number[] },
+    file: {
+      name: string;
+      type: string;
+      data: number[];
+    },
     userId: string,
   ) {
     return await firstValueFrom(

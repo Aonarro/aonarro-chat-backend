@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsOptional, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsObject,
+  IsNumber,
+} from 'class-validator';
 
 class FileDto {
   @IsString()
@@ -12,6 +18,14 @@ class FileDto {
   @IsString()
   @IsNotEmpty()
   data: number[];
+
+  @IsNumber()
+  @IsNotEmpty()
+  width: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  height: number;
 }
 
 export class SendMessageWithFileDto {

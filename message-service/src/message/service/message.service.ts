@@ -69,6 +69,8 @@ export class MessageService {
     chatId: string;
     senderId: string;
     fileKey: string;
+    fileWidth: number;
+    fileHeight: number;
   }) {
     try {
       return await this.prismaService.message.create({
@@ -83,6 +85,8 @@ export class MessageService {
             create: [
               {
                 fileKey: createMessageData.fileKey,
+                width: createMessageData.fileWidth,
+                height: createMessageData.fileHeight,
               },
             ],
           },
@@ -99,6 +103,8 @@ export class MessageService {
           attachments: {
             select: {
               fileKey: true,
+              width: true,
+              height: true,
             },
           },
         },
@@ -196,6 +202,8 @@ export class MessageService {
           attachments: message.attachments?.map((attachment) => ({
             fileKey: attachment.fileKey,
             url: fileUrls[attachment.fileKey],
+            width: attachment.width,
+            height: attachment.height,
           })),
         }),
       );
@@ -206,10 +214,8 @@ export class MessageService {
         hasMore: offset + messages.length < total,
       };
     } catch (error) {
-      this.logger.error(
-        `Ошибка при получении сообщений чата: ${error.message}`,
-      );
-      throw new RpcException('Ошибка при получении сообщений');
+      this.logger.error(`Error receiving chat messages: ${error.message}`);
+      throw new RpcException('Error receiving chat messages');
     }
   }
 
@@ -240,20 +246,12 @@ export class MessageService {
       console.log('Found messages:', messages);
 
       if (!messages.length) {
-        console.log('No messages found for update');
         return [];
       }
-
-      // this.logger.debug('Found messages:', messages);
 
       const updatePromises = messages.map((message) => {
         const uniqueReadBy = new Set([...(message.readBy || []), userId]);
         const readByArray = Array.from(uniqueReadBy);
-
-        // console.log(`Preparing update for message ${message.id}:`, {
-        //   currentReadBy: message.readBy,
-        //   newReadBy: readByArray,
-        // });
 
         return this.prismaService.message.update({
           where: {
@@ -274,7 +272,6 @@ export class MessageService {
       });
 
       const updatedMessages = await Promise.all(updatePromises);
-      // console.log('Updated messages:', updatedMessages);
 
       return updatedMessages;
     } catch (error) {

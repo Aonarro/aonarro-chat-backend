@@ -27,8 +27,6 @@ export class MessageController {
   async createMessage(
     @Payload() data: { content: string; chatId: string; senderId: string },
   ) {
-    console.log('create_message', data);
-
     try {
       await this.chatService.verifyChatAccess(data.chatId, data.senderId);
 
@@ -75,6 +73,8 @@ export class MessageController {
         name: string;
         type: string;
         data: number[];
+        width: number;
+        height: number;
       };
     },
   ) {
@@ -91,13 +91,13 @@ export class MessageController {
         senderId,
       );
 
-      console.log(`NEW MESSAGE WITH FILE ${content}`, uploadResponse);
-
       const messageWithFile = await this.messageService.createMessageWithFile({
         content,
         chatId,
         senderId,
         fileKey: uploadResponse.key,
+        fileWidth: file.width,
+        fileHeight: file.height,
       });
 
       await this.chatService.changeChatLastMessage(
@@ -149,8 +149,6 @@ export class MessageController {
     },
   ): Promise<MessagesResponse> {
     try {
-      console.log('get_chat_messages', data.chatId, data.userId);
-
       await this.chatService.verifyChatAccess(data.chatId, data.userId);
 
       const messagesData = await this.messageService.getMessagesByChatId(
@@ -166,7 +164,7 @@ export class MessageController {
       };
     } catch (error) {
       this.logger.error(
-        `Ошибка при получении сообщений чата ${data.chatId}: ${error.message}`,
+        `Error receiving chat messages ${data.chatId}: ${error.message}`,
         error.stack,
       );
 
@@ -175,7 +173,7 @@ export class MessageController {
       }
 
       throw new RpcException({
-        message: 'Ошибка при получении сообщений',
+        message: 'Error receiving chat messages',
         code: 'MESSAGES_FETCH_ERROR',
       });
     }
