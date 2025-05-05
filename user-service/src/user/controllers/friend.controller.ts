@@ -63,12 +63,13 @@ export class FriendController {
 
   @Get('search')
   @UseGuards(SessionAuthGuard)
-  async searchUsers(@Query('q') query: string) {
+  async searchUsers(@Req() req: RequestWithUserId, @Query('q') query: string) {
+    const userId = req.userId;
     if (!query) {
       return [];
     }
 
-    const result = await this.friendService.searchUsers(query);
+    const result = await this.friendService.searchUsers(query, userId);
 
     return result;
   }

@@ -49,6 +49,8 @@ export class ChatController {
         throw new RpcException('You are not friends with this user');
       }
 
+      let isNewChat = false;
+
       let chat = await this.chatService.findExistingChat(
         currentUserId,
         friendUserId,
@@ -59,6 +61,7 @@ export class ChatController {
           currentUserId,
           friendUserId,
         );
+        isNewChat = true;
       }
 
       const friendStatus =
@@ -81,9 +84,7 @@ export class ChatController {
         },
       };
 
-      console.log(formattedChat);
-
-      return formattedChat;
+      return { isNewChat: isNewChat, chat: formattedChat };
     } catch (error) {
       this.logger.error('Error in createOrGetChat', error.stack);
 

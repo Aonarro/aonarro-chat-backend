@@ -79,7 +79,6 @@ export class AuthModule implements NestModule {
             httpOnly: sessionHTTP_ONLY,
             maxAge: sessionMaxAge,
             sameSite: 'lax',
-            domain: 'localhost',
           },
           store: new RedisStore({
             client: redisClient,

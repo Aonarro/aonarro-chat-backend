@@ -221,7 +221,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `Chat successfully processed - Chat ID: ${chat.id}, Initiator: ${currentUserId}`,
       );
 
-      client.emit('chat_ready', { chat: chat, requestId: data.requestId });
+      client.emit('chat_ready', { chat: chat.chat, requestId: data.requestId });
+      console.log('CHAT RESPONSE', chat);
+      if (chat.isNewChat) {
+        console.log('new chat' + chat.isNewChat);
+        this.server.emit('notify_new_chat', {
+          receiverId: chat.chat.participantProfile.userId,
+        });
+      }
     } catch (error) {
       this.logger.error(
         `Chat operation failed - Initiator: ${client.userId}`,

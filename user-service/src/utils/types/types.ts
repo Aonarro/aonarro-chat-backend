@@ -6,6 +6,7 @@ export interface RequestWithUserId extends Request {
 
 export interface ProfileResponse {
   id: string;
+  userId: string;
   username: string;
   email: string;
   firstName?: string | null;

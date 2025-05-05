@@ -230,8 +230,8 @@ export class FriendService {
     };
   }
 
-  async searchUsers(query: string) {
-    const users = await this.elasticSearchService.searchProfiles(query);
+  async searchUsers(query: string, userId: string) {
+    const users = await this.elasticSearchService.searchProfiles(query, userId);
 
     return users;
   }
