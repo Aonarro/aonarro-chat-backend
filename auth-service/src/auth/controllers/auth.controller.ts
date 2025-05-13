@@ -58,6 +58,16 @@ export class AuthController {
     };
   }
 
+  @Get('check-status')
+  @UseGuards(SessionAuthGuard)
+  checkUserLogInStatus() {
+    console.log('check user status');
+
+    return {
+      message: 'You are logged in',
+    };
+  }
+
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   public async logout(
