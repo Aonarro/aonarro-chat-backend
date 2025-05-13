@@ -1,6 +1,7 @@
 node_modules/
 .env
 .idea
+certs
 
 # Ignore Prisma generated and migration folders across all services
 **/prisma/migrations/

@@ -79,6 +79,7 @@ export class MessageController {
     },
   ) {
     const { chatId, senderId, content, file } = data;
+    console.log(file);
     try {
       await this.chatService.verifyChatAccess(chatId, senderId);
 
@@ -120,6 +121,8 @@ export class MessageController {
           {
             fileKey: uploadResponse.key,
             url: uploadResponse.url,
+            width: messageWithFile.attachments[0].width,
+            height: messageWithFile.attachments[0].height,
           },
         ],
       };

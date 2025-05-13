@@ -39,7 +39,7 @@ import { SendMessageWithFileDto } from '../dto/create-message-with-file.dto';
   allowEIO3: true,
   pingInterval: 10000,
   pingTimeout: 5000,
-  maxHttpBufferSize: 10e6,
+  maxHttpBufferSize: 20e6,
 })
 @UseFilters(WsValidationFilter, WsRpcExceptionFilter)
 @UsePipes(
@@ -468,7 +468,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.messageClient
           .send('create_message_with_file', messagePayload)
           .pipe(
-            timeout(10000),
+            timeout(20000),
             catchError((error) => {
               this.logger.error(
                 `RabbitMQ error while sending message with file - User ID: ${client.userId}`,

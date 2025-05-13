@@ -52,7 +52,7 @@ export class ProfileAvatarConsumer {
     },
   ) {
     const { userId, fileData } = payload;
-    console.log(payload);
+    console.log('FILE SERVICE PAYLOAD', payload);
     try {
       const messageFileBuffer = Buffer.from(fileData.data);
       console.log('Buffer', messageFileBuffer);

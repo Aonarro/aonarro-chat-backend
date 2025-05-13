@@ -26,7 +26,7 @@ export class FileService {
           fileData: Buffer.from(file.data),
         })
         .pipe(
-          timeout(10000),
+          timeout(15000),
           catchError((error) => {
             this.logger.error(
               `File upload failed - User ID: ${userId}`,

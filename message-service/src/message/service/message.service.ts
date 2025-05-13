@@ -130,6 +130,8 @@ export class MessageService {
         },
       });
 
+      console.log('MESSAGE', message);
+
       return {
         ...message,
         content: createMessageData.content,

@@ -1,3 +1,4 @@
+import { ImageProcessingService } from './image-processing.service';
 import {
   Injectable,
   InternalServerErrorException,
@@ -8,16 +9,23 @@ import { S3Service } from './aws-s3.service';
 @Injectable()
 export class FileService {
   private readonly logger = new Logger(FileService.name);
-  constructor(public readonly s3Service: S3Service) {}
+  constructor(
+    public readonly s3Service: S3Service,
+    private readonly imageProcessingService: ImageProcessingService,
+  ) {}
 
   async uploadUserAvatar(userId: string, avatarBuffer: Buffer) {
     const key = `avatars/${userId}.jpg`;
 
     try {
       this.logger.log(`Uploading avatar for user: ${userId}`);
+
+      const processedAvatarBuffer =
+        await this.imageProcessingService.processImage(avatarBuffer);
+
       const { url } = await this.s3Service.uploadFile({
         key,
-        file: avatarBuffer,
+        file: processedAvatarBuffer,
         isPublic: true,
         metadata: {
           userId,
@@ -56,9 +64,14 @@ export class FileService {
 
     try {
       this.logger.log(`Uploading message file for user: ${userId}`);
+
+      // Используем новый сервис для обработки изображения
+      const processedFileBuffer =
+        await this.imageProcessingService.processImage(fileBuffer);
+
       const { key: fullKey, url } = await this.s3Service.uploadFile({
         key,
-        file: fileBuffer,
+        file: processedFileBuffer,
         isPublic: false,
         metadata: { userId },
       });
