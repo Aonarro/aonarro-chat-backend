@@ -5,6 +5,7 @@ import { firstValueFrom, timeout } from 'rxjs';
 import { MessageWithSender, UserProfile } from '../../utils/types/types';
 import { UserService } from './user.service';
 import { FileService } from './file.service';
+import { EncryptionService } from './crypto.service';
 
 @Injectable()
 export class MessageService {
@@ -16,10 +17,11 @@ export class MessageService {
     private readonly userClient: ClientProxy,
     private readonly fileService: FileService,
     private readonly userService: UserService,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   async getMessagesByIds(messageIds: string[]) {
-    return this.prismaService.message.findMany({
+    const messages = await this.prismaService.message.findMany({
       where: {
         id: { in: messageIds },
       },
@@ -30,6 +32,11 @@ export class MessageService {
         createdAt: true,
       },
     });
+
+    return messages.map((msg) => ({
+      ...msg,
+      content: this.encryptionService.decrypt(msg.content),
+    }));
   }
 
   async createMessage(createMessageData: {
@@ -38,9 +45,13 @@ export class MessageService {
     senderId: string;
   }) {
     try {
-      return await this.prismaService.message.create({
+      const encryptedContent = this.encryptionService.encrypt(
+        createMessageData.content,
+      );
+
+      const message = await this.prismaService.message.create({
         data: {
-          content: createMessageData.content,
+          content: encryptedContent,
           chatId: createMessageData.chatId,
           senderId: createMessageData.senderId,
           readBy: {
@@ -58,6 +69,11 @@ export class MessageService {
           chatId: true,
         },
       });
+
+      return {
+        ...message,
+        content: createMessageData.content,
+      };
     } catch (error) {
       this.logger.error(`Error while creating message: ${error.message}`);
       throw new RpcException('Error while creating message');
@@ -73,9 +89,13 @@ export class MessageService {
     fileHeight: number;
   }) {
     try {
-      return await this.prismaService.message.create({
+      const encryptedContent = this.encryptionService.encrypt(
+        createMessageData.content,
+      );
+
+      const message = await this.prismaService.message.create({
         data: {
-          content: createMessageData.content,
+          content: encryptedContent,
           chatId: createMessageData.chatId,
           senderId: createMessageData.senderId,
           readBy: {
@@ -109,6 +129,11 @@ export class MessageService {
           },
         },
       });
+
+      return {
+        ...message,
+        content: createMessageData.content,
+      };
     } catch (error) {
       this.logger.error(`Error while creating message: ${error.message}`);
       throw new RpcException('Error while creating message');
@@ -189,7 +214,7 @@ export class MessageService {
       const formattedMessages: MessageWithSender[] = messages.map(
         (message) => ({
           id: message.id,
-          content: message.content,
+          content: this.encryptionService.decrypt(message.content),
           createdAt: message.createdAt,
           edited: message.edited,
           readBy: message.readBy,
@@ -306,6 +331,8 @@ export class MessageService {
       const senderProfile = await this.userService.getUserProfileById(userId);
       const isMessageLast = lastMessage?.id === messageId;
 
+      const encryptedContent = this.encryptionService.encrypt(content);
+
       const response = await this.prismaService.message.update({
         where: {
           chatId: chatId,
@@ -313,7 +340,7 @@ export class MessageService {
           senderId: userId,
         },
         data: {
-          content: content,
+          content: encryptedContent,
           edited: true,
         },
         select: {
@@ -332,6 +359,7 @@ export class MessageService {
 
       const formattedMessage = {
         ...restProperties,
+        content: content,
         sender: {
           userId: senderProfile.userId,
           username: senderProfile.username,
@@ -407,7 +435,7 @@ export class MessageService {
   }
 
   async getLastMessageFromChat(chatId: string) {
-    return await this.prismaService.message.findFirst({
+    const message = await this.prismaService.message.findFirst({
       where: {
         chatId: chatId,
         deletedForEveryone: false,
@@ -425,6 +453,13 @@ export class MessageService {
         senderId: true,
       },
     });
+
+    if (!message) return null;
+
+    return {
+      ...message,
+      content: this.encryptionService.decrypt(message.content),
+    };
   }
 
   async getUnreadMessagesCount(

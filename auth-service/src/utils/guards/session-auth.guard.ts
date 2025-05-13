@@ -14,6 +14,8 @@ export class SessionAuthGuard extends AuthGuard('session') {
       throw new UnauthorizedException('User is not authenticated');
     }
 
+    console.log('test', req.isAuthenticated());
+
     return true;
   }
 }
